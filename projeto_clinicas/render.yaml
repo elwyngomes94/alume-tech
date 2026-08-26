@@ -31,15 +31,15 @@ services:
   - type: web
     name: alumetech-web
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: projeto_clinicas/Dockerfile
+    dockerContext: projeto_clinicas
     plan: starter
     healthCheckPath: /healthz/
-    preDeployCommand: >
-      python manage.py migrate --noinput &&
-      python manage.py collectstatic --noinput
-    dockerCommand: >
-      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    # Migracao + collectstatic ficam dentro de deploy/render-start.sh, rodando
+    # no MESMO container que serve as requisicoes -- o Pre-Deploy Command do
+    # Render usa um container separado e efemero, entao arquivos gerados la
+    # (como o manifesto do collectstatic) nao chegariam ao container final.
+    dockerCommand: bash deploy/render-start.sh
     disk:
       name: alumetech-data
       mountPath: /data
@@ -100,8 +100,8 @@ services:
   - type: worker
     name: alumetech-celery-worker
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: projeto_clinicas/Dockerfile
+    dockerContext: projeto_clinicas
     plan: starter
     dockerCommand: celery -A config worker -l info
     envVars:
@@ -136,8 +136,8 @@ services:
   - type: worker
     name: alumetech-celery-beat
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: projeto_clinicas/Dockerfile
+    dockerContext: projeto_clinicas
     plan: starter
     dockerCommand: celery -A config beat -l info
     envVars:
