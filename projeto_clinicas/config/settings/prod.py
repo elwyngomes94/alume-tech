@@ -13,8 +13,23 @@ SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# Sessoes em cache + banco para expiracao rapida e revogacao imediata
-SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+_has_redis = env("REDIS_URL", default="").startswith(("redis://", "rediss://"))
+
+if _has_redis:
+    # Sessoes em cache + banco para expiracao rapida e revogacao imediata.
+    SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+else:
+    # Deploy sem Redis (ex.: publicacao gratuita so para teste, numa unica
+    # instancia): cache local por processo, sessoes direto no banco, e
+    # tarefas do Celery executadas na hora (sem broker/worker separado).
+    CACHES = {  # noqa: F405
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "jja-prod-sem-redis",
+        }
+    }
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
+    CELERY_TASK_ALWAYS_EAGER = True  # noqa: F405
 
 if SENTRY_DSN:  # noqa: F405 - integracao opcional de monitoramento
     try:  # pragma: no cover - depende de dependencia opcional
