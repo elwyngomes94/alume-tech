@@ -1,0 +1,191 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Agendamento - {{ appointment.patient.display_name }}{% endblock %}
+{% block page_subtitle %}{{ appointment.start_at|date:"d/m/Y H:i" }} &middot; {{ appointment.get_status_display }}{% endblock %}
+
+{% block page_actions %}
+  {% if can_change %}
+    <a class="btn btn-outline-secondary" href="{% url 'scheduling:appointment-update' appointment.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">Detalhes</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-4">Paciente</dt><dd class="col-8"><a href="{% url 'patients:detail' appointment.patient.pk %}">{{ appointment.patient.display_name }}</a></dd>
+          <dt class="col-4">Profissional</dt><dd class="col-8">{{ appointment.professional.display_name }}</dd>
+          <dt class="col-4">Servico</dt><dd class="col-8">{{ appointment.service|default:"-" }}</dd>
+          <dt class="col-4">Sala</dt><dd class="col-8">{{ appointment.room|default:"-" }}</dd>
+          <dt class="col-4">Convenio</dt><dd class="col-8">{{ appointment.insurance|default:"Particular" }}</dd>
+          <dt class="col-4">Origem</dt><dd class="col-8">{{ appointment.get_origin_display }}</dd>
+          <dt class="col-4">Observacoes</dt><dd class="col-8">{{ appointment.notes|default:"-"|linebreaksbr }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if appointment.record_entries.count %}
+      <div class="card mb-3">
+        <div class="card-header">Registro clinico deste atendimento</div>
+        <ul class="list-group list-group-flush">
+          {% for entry in appointment.record_entries.all %}
+            <li class="list-group-item">
+              <a href="{% url 'medical_records:entry-detail' entry.pk %}">{{ entry.title|default:"Atendimento" }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if receivable %}
+      <div class="card">
+        <div class="card-header">Financeiro</div>
+        <div class="card-body small">
+          <dl class="row mb-0">
+            <dt class="col-4">Valor original</dt><dd class="col-8">R$ {{ receivable.gross_amount|floatformat:2 }}</dd>
+            <dt class="col-4">Desconto</dt><dd class="col-8">R$ {{ receivable.discount|floatformat:2 }}</dd>
+            <dt class="col-4">Acrescimo</dt><dd class="col-8">R$ {{ receivable.addition|floatformat:2 }}</dd>
+            <dt class="col-4">Valor final</dt><dd class="col-8"><strong>R$ {{ receivable.net_amount|floatformat:2 }}</strong></dd>
+            <dt class="col-4">Pago</dt><dd class="col-8">R$ {{ receivable.paid_amount|floatformat:2 }}</dd>
+            <dt class="col-4">Saldo</dt><dd class="col-8">R$ {{ receivable.balance|floatformat:2 }}</dd>
+            <dt class="col-4">Status</dt>
+            <dd class="col-8">
+              <span class="badge text-bg-{% if receivable.status == 'paid' %}success{% elif receivable.status == 'overdue' %}danger{% elif receivable.status == 'partial' %}warning{% elif receivable.status == 'courtesy' %}secondary{% elif receivable.status == 'canceled' or receivable.status == 'refunded' %}dark{% else %}light border{% endif %}">
+                {{ receivable.get_status_display }}
+              </span>
+            </dd>
+          </dl>
+
+          <h3 class="h6 mt-3">Historico de pagamentos</h3>
+          <ul class="list-group list-group-flush">
+            {% for payment in receivable.transactions.all %}
+              <li class="list-group-item d-flex justify-content-between px-0">
+                <span>
+                  {{ payment.paid_at|date:"d/m/Y H:i" }} - {{ payment.method }}
+                  {% if payment.created_by %}({{ payment.created_by.full_name }}){% endif %}
+                  {% if payment.kind == 'refund' %}<span class="badge text-bg-dark">Estorno</span>{% endif %}
+                </span>
+                <strong>{% if payment.kind == 'refund' %}-{% endif %}R$ {{ payment.amount|floatformat:2 }}</strong>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-body-secondary px-0">Nenhum pagamento registrado.</li>
+            {% endfor %}
+          </ul>
+
+          {% if can_manage_payment and receivable.balance > 0 and receivable.status != 'canceled' and receivable.status != 'refunded' %}
+            <form method="post" action="{% url 'finance:appointment-receivable-pay' receivable.pk %}" class="mt-3 border-top pt-3">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <div class="row g-2">
+                <div class="col-6"><input class="form-control form-control-sm" type="number" step="0.01" min="0.01" name="amount" placeholder="Valor" required></div>
+                <div class="col-6">
+                  <select class="form-select form-select-sm" name="method" required>
+                    <option value="">Forma de pagamento</option>
+                    {% for method in payment_methods %}
+                      <option value="{{ method.pk }}">{{ method.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <input type="hidden" name="paid_at" value="{% now 'Y-m-d' %}">
+                <div class="col-12"><button class="btn btn-sm btn-success w-100" type="submit">Dar baixa</button></div>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">Fluxo do atendimento</div>
+      <div class="card-body d-grid gap-2">
+        {% if can_change %}
+          {% if appointment.status == 'scheduled' %}
+            <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'confirmed' %}">
+              {% csrf_token %}<button class="btn btn-outline-primary w-100" type="submit">Confirmar</button>
+            </form>
+          {% endif %}
+          {% if appointment.status in 'scheduled,confirmed' %}
+            <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'checked_in' %}">
+              {% csrf_token %}<button class="btn btn-outline-info w-100" type="submit">Registrar chegada</button>
+            </form>
+          {% endif %}
+          {% if appointment.status == 'checked_in' %}
+            <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'in_progress' %}">
+              {% csrf_token %}<button class="btn btn-outline-warning w-100" type="submit">Iniciar atendimento</button>
+            </form>
+          {% endif %}
+          {% if appointment.status == 'in_progress' %}
+            <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'completed' %}">
+              {% csrf_token %}<button class="btn btn-success w-100" type="submit">Concluir atendimento</button>
+            </form>
+          {% endif %}
+          {% if appointment.status in 'scheduled,confirmed,checked_in' %}
+            <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'no_show' %}">
+              {% csrf_token %}<button class="btn btn-outline-dark w-100" type="submit">Marcar falta</button>
+            </form>
+          {% endif %}
+
+          {% if perms_clinic.appointment_cancel and appointment.is_active %}
+            <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#cancelModal">
+              Cancelar agendamento
+            </button>
+          {% endif %}
+        {% else %}
+          <p class="text-body-secondary small mb-0">Voce nao tem permissao para alterar o status.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if can_change and appointment.is_active %}
+      <div class="card">
+        <div class="card-header">Remarcar</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'scheduling:appointment-reschedule' appointment.pk %}" class="row g-2">
+            {% csrf_token %}
+            <div class="col-7"><input class="form-control form-control-sm" type="date" name="date" required></div>
+            <div class="col-5"><input class="form-control form-control-sm" type="time" name="time" required></div>
+            <div class="col-12"><button class="btn btn-sm btn-outline-secondary w-100" type="submit">Remarcar</button></div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'canceled' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Cancelar agendamento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <label class="form-label">Motivo</label>
+          <textarea class="form-control" name="reason" rows="3" required></textarea>
+
+          {% if receivable.paid_amount > 0 %}
+            <label class="form-label d-block mt-3">O que fazer com o valor ja recebido (R$ {{ receivable.paid_amount|floatformat:2 }})?</label>
+            {% for value, label in cancel_form.fields.payment_disposition.choices %}
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="payment_disposition"
+                       id="disposition{{ forloop.counter }}" value="{{ value }}"
+                       {% if value == "keep_policy" %}checked{% endif %}>
+                <label class="form-check-label" for="disposition{{ forloop.counter }}">{{ label }}</label>
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Voltar</button>
+          <button type="submit" class="btn btn-danger">Confirmar cancelamento</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

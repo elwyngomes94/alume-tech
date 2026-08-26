@@ -1,0 +1,19 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Confirmar exclusao{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <p class="mb-4">
+      Tem certeza que deseja excluir <strong>{{ object }}</strong>?
+      Esta acao sera registrada na auditoria.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Excluir</button>
+      <a class="btn btn-light" href="{{ request.META.HTTP_REFERER|default:'/app/' }}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

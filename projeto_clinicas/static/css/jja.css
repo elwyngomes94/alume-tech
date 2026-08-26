@@ -1,0 +1,204 @@
+/* ==========================================================================
+   JJA System - identidade visual
+   A cor primaria (--jja-primary) e definida em tempo de execucao a partir da
+   configuracao de cada clinica, mantendo a estrutura administrativa igual.
+   ========================================================================== */
+
+:root {
+  --jja-primary: #0b5ed7;
+  --jja-sidebar-bg: #0f172a;
+  --jja-sidebar-fg: #cbd5f5;
+  --jja-sidebar-active: rgba(255, 255, 255, .12);
+  --jja-surface: #f5f7fb;
+  --jja-border: #e3e8ef;
+  --jja-radius: .75rem;
+}
+
+body {
+  background: var(--jja-surface);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: #1f2937;
+}
+
+a { color: var(--jja-primary); }
+
+.btn-primary,
+.btn-primary:disabled {
+  background-color: var(--jja-primary);
+  border-color: var(--jja-primary);
+}
+.btn-primary:hover, .btn-primary:focus { filter: brightness(.92); }
+.btn-outline-primary { color: var(--jja-primary); border-color: var(--jja-primary); }
+.btn-outline-primary:hover { background: var(--jja-primary); border-color: var(--jja-primary); }
+.text-primary { color: var(--jja-primary) !important; }
+.form-control:focus, .form-select:focus {
+  border-color: var(--jja-primary);
+  box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--jja-primary) 25%, transparent);
+}
+
+/* ---------- estrutura ---------- */
+.jja-shell { display: flex; min-height: 100vh; }
+
+.jja-sidebar {
+  width: 260px;
+  background: var(--jja-sidebar-bg);
+  color: var(--jja-sidebar-fg);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 1045;
+  transform: translateX(-100%);
+  transition: transform .2s ease;
+  overflow-y: auto;
+}
+.jja-sidebar.show { transform: translateX(0); }
+
+.jja-sidebar-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, .5);
+  z-index: 1040; display: none;
+}
+.jja-sidebar-backdrop.show { display: block; }
+
+.jja-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+@media (min-width: 992px) {
+  .jja-sidebar { position: sticky; height: 100vh; transform: none; }
+  .jja-sidebar-backdrop { display: none !important; }
+  .jja-main { margin-left: 0; }
+}
+
+.jja-brand {
+  display: flex; align-items: center; gap: .75rem;
+  padding: 1.15rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.jja-brand-text strong { color: #fff; display: block; font-size: .95rem; line-height: 1.2; }
+.jja-brand-text small { color: rgba(255, 255, 255, .6); font-size: .74rem; }
+.jja-brand-logo { width: 40px; height: 40px; object-fit: contain; background: #fff;
+  border-radius: .5rem; padding: 2px; }
+.jja-brand-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: .6rem; font-weight: 700; letter-spacing: .5px;
+  background: var(--jja-primary); color: #fff; font-size: .85rem; flex: none;
+}
+.jja-brand-mark.lg { width: 64px; height: 64px; font-size: 1.2rem; }
+.jja-brand-mark.sm { width: 32px; height: 32px; font-size: .7rem; }
+
+.jja-auth-logo { width: min(360px, 80%); height: auto; margin-bottom: 1rem; filter: drop-shadow(0 10px 30px rgba(11, 94, 215, .35)); }
+
+.jja-nav { padding: .75rem .6rem 2rem; display: flex; flex-direction: column; gap: 2px; }
+.jja-nav-group {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+  color: rgba(255, 255, 255, .38); padding: .9rem .65rem .3rem;
+}
+.jja-nav-link {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .55rem .65rem; border-radius: .5rem;
+  color: var(--jja-sidebar-fg); text-decoration: none; font-size: .9rem;
+}
+.jja-nav-link:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+.jja-nav-link.active { background: var(--jja-sidebar-active); color: #fff; font-weight: 600; }
+.jja-nav-link i { width: 1.1rem; text-align: center; }
+
+.jja-topbar {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .7rem 1rem; background: #fff; border-bottom: 1px solid var(--jja-border);
+  position: sticky; top: 0; z-index: 1030;
+}
+.jja-search { position: relative; flex: 1; max-width: 460px; }
+.jja-search i { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%);
+  color: #9aa4b2; }
+.jja-search input { padding-left: 2.25rem; }
+
+.jja-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--jja-primary); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 600;
+}
+
+.jja-content { padding: 1.25rem; flex: 1; }
+.jja-footer {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: .85rem 1.25rem; border-top: 1px solid var(--jja-border);
+  background: #fff; font-size: .8rem; color: #6b7280;
+}
+.jja-notifications { min-width: 320px; max-height: 420px; overflow-y: auto; }
+
+/* ---------- componentes ---------- */
+.card { border: 1px solid var(--jja-border); border-radius: var(--jja-radius); }
+.card-header { background: #fff; border-bottom: 1px solid var(--jja-border); font-weight: 600; }
+
+.jja-stat {
+  background: #fff; border: 1px solid var(--jja-border); border-radius: var(--jja-radius);
+  padding: 1rem; height: 100%;
+}
+.jja-stat .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+  color: #6b7280; }
+.jja-stat .value { font-size: 1.65rem; font-weight: 700; line-height: 1.2; }
+.jja-stat .hint { font-size: .78rem; color: #6b7280; }
+.jja-stat-icon {
+  width: 40px; height: 40px; border-radius: .6rem; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 1.1rem;
+  background: color-mix(in srgb, var(--jja-primary) 12%, transparent);
+  color: var(--jja-primary);
+}
+
+.table > :not(caption) > * > * { padding: .65rem .75rem; }
+.table thead th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
+  color: #6b7280; background: #fbfcfe; }
+
+.jja-filters { background: #fff; border: 1px solid var(--jja-border);
+  border-radius: var(--jja-radius); padding: .85rem; margin-bottom: 1rem; }
+
+/* ---------- agenda ---------- */
+.jja-slot {
+  display: flex; align-items: center; gap: .75rem;
+  border: 1px solid var(--jja-border); border-left-width: 4px;
+  border-radius: .5rem; padding: .55rem .75rem; margin-bottom: .4rem; background: #fff;
+}
+.jja-slot.free { border-left-color: #94a3b8; background: #fbfcfe; }
+.jja-slot .time { font-weight: 600; min-width: 4.5rem; }
+.jja-week-cell { min-height: 130px; vertical-align: top; }
+.jja-month-cell { height: 118px; vertical-align: top; font-size: .78rem; }
+.jja-month-cell.today { background: color-mix(in srgb, var(--jja-primary) 8%, #fff); }
+.jja-chip {
+  display: block; border-radius: .35rem; padding: .15rem .4rem; margin-bottom: .2rem;
+  font-size: .72rem; text-decoration: none; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- prontuario ---------- */
+.jja-timeline { position: relative; padding-left: 1.5rem; }
+.jja-timeline::before {
+  content: ""; position: absolute; left: .42rem; top: .3rem; bottom: .3rem;
+  width: 2px; background: var(--jja-border);
+}
+.jja-timeline-item { position: relative; margin-bottom: 1rem; }
+.jja-timeline-item::before {
+  content: ""; position: absolute; left: -1.29rem; top: .45rem;
+  width: .7rem; height: .7rem; border-radius: 50%;
+  background: var(--jja-primary); border: 2px solid #fff;
+}
+
+/* ---------- autenticacao ---------- */
+.jja-auth-body { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); }
+.jja-auth {
+  min-height: 100vh; display: grid; align-items: center; gap: 3rem;
+  grid-template-columns: 1fr; padding: 2rem 1rem; max-width: 1080px; margin: 0 auto;
+}
+@media (min-width: 992px) { .jja-auth { grid-template-columns: 1fr 420px; } }
+.jja-auth-brand { color: #e2e8f0; }
+.jja-auth-brand h1 { margin-top: 1rem; font-weight: 700; }
+.jja-auth-brand ul { list-style: none; padding: 0; margin-top: 1.5rem; }
+.jja-auth-brand li { margin-bottom: .6rem; display: flex; gap: .6rem; align-items: center; }
+
+.jja-portal-nav { background: #fff; border-bottom: 1px solid var(--jja-border); }
+
+/* ---------- impressao ---------- */
+@media print {
+  .jja-sidebar, .jja-topbar, .jja-footer, .no-print { display: none !important; }
+  .jja-content { padding: 0; }
+  body { background: #fff; }
+  .card { border: none; }
+}

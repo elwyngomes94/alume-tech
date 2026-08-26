@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}LGPD e privacidade{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Solicitacoes pendentes</div><div class="value">{{ pending_requests }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Consentimentos registrados</div><div class="value">{{ consents_total }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Pacientes ativos</div><div class="value">{{ retention.pacientes_ativos }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Registros fora da retencao</div><div class="value">{{ retention.registros_fora_do_prazo }}</div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Solicitacoes recentes de titulares</span>
+        <a class="small" href="{% url 'lgpd:request-list' %}">Ver todas</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for item in requests %}
+          <li class="list-group-item d-flex justify-content-between">
+            <a href="{% url 'lgpd:request-detail' item.pk %}">{{ item.requester_name }} - {{ item.get_kind_display }}</a>
+            <span class="badge text-bg-light border">{{ item.get_status_display }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma solicitacao registrada.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Incidentes de seguranca</span>
+        <a class="small" href="{% url 'lgpd:incident-list' %}">Gerenciar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for incident in incidents %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ incident.title }}</span>
+            <span class="badge text-bg-{% if incident.severity == 'critical' %}danger{% elif incident.severity == 'high' %}warning{% else %}secondary{% endif %}">
+              {{ incident.get_severity_display }}
+            </span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum incidente registrado.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Termos de consentimento</span>
+        <a class="small" href="{% url 'lgpd:consent-type-list' %}">Gerenciar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for type in consent_types %}
+          <li class="list-group-item">
+            {{ type.name }} <span class="text-body-secondary small">({{ type.get_legal_basis_display }})</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum termo cadastrado.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

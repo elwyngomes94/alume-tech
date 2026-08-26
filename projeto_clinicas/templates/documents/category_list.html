@@ -1,0 +1,41 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Categorias de documento{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Nome</th><th>Clinico</th><th>Visivel ao paciente</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for category in categories %}
+              <tr>
+                <td>{{ category.name }}</td>
+                <td>{% if category.is_clinical %}Sim{% else %}Nao{% endif %}</td>
+                <td>{% if category.visible_to_patient_default %}Sim{% else %}Nao{% endif %}</td>
+                <td>{% if category.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">Nenhuma categoria.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">Nova categoria</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'documents:category-create' %}" novalidate>
+          {% csrf_token %}
+          {% include "includes/form.html" with form=form %}
+          <button class="btn btn-primary w-100 mt-3" type="submit">Adicionar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

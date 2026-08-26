@@ -1,0 +1,237 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Painel | {{ active_clinic }}{% endblock %}
+{% block page_title %}Painel da clinica{% endblock %}
+{% block page_subtitle %}Indicadores de {{ start|date:"d/m/Y" }} a {{ end|date:"d/m/Y" }}.{% endblock %}
+
+{% block page_actions %}
+<form method="get" class="d-flex gap-2">
+  <select class="form-select form-select-sm" name="period" onchange="this.form.submit()">
+    <option value="today" {% if period == 'today' %}selected{% endif %}>Hoje</option>
+    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+    <option value="90d" {% if period == '90d' %}selected{% endif %}>90 dias</option>
+    <option value="12m" {% if period == '12m' %}selected{% endif %}>12 meses</option>
+  </select>
+</form>
+{% if perms_clinic.appointment_add %}
+  <a class="btn btn-primary btn-sm" href="{% url 'scheduling:appointment-create' %}">
+    <i class="bi bi-calendar-plus"></i> Novo agendamento
+  </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><div class="label">Pacientes</div><div class="value">{{ total_patients }}</div></div>
+        <span class="jja-stat-icon"><i class="bi bi-people"></i></span>
+      </div>
+      <div class="hint">+{{ new_patients }} no periodo</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><div class="label">Agenda de hoje</div><div class="value">{{ today_summary.total }}</div></div>
+        <span class="jja-stat-icon"><i class="bi bi-calendar3"></i></span>
+      </div>
+      <div class="hint">{{ today_summary.confirmed }} confirmados / {{ today_summary.waiting }} aguardando</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><div class="label">Atendimentos</div><div class="value">{{ period_completed }}</div></div>
+        <span class="jja-stat-icon"><i class="bi bi-check2-circle"></i></span>
+      </div>
+      <div class="hint">de {{ period_total }} agendamentos no periodo</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><div class="label">Cancelamentos/faltas</div><div class="value">{{ period_canceled|add:period_no_show }}</div></div>
+        <span class="jja-stat-icon"><i class="bi bi-x-circle"></i></span>
+      </div>
+      <div class="hint">{{ period_canceled }} cancelados / {{ period_no_show }} faltas</div>
+    </div>
+  </div>
+</div>
+
+{% if finance_summary %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><div class="label">Saldo atual</div><div class="value">R$ {{ finance_summary.current_balance|floatformat:2 }}</div></div>
+        <span class="jja-stat-icon"><i class="bi bi-cash-coin"></i></span>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Receita do periodo</div>
+      <div class="value text-success">R$ {{ finance_summary.period_income|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">A receber (aberto)</div>
+      <div class="value">R$ {{ finance_summary.receivables_open|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Contas vencidas</div>
+      <div class="value text-danger">R$ {{ finance_summary.receivables_overdue|add:finance_summary.payables_overdue|floatformat:2 }}</div>
+      <a class="hint" href="{% url 'finance:dashboard' %}">ver financeiro</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">Agendamentos por dia</div>
+      <div class="card-body"><canvas id="chartDays" height="110"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Distribuicao por status</div>
+      <div class="card-body"><canvas id="chartStatus" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Agenda de hoje</span>
+        <a class="small" href="{% url 'scheduling:agenda-day' %}">Ver agenda</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Hora</th><th>Paciente</th><th>Profissional</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for appointment in today_appointments %}
+              <tr>
+                <td>{{ appointment.start_at|time:"H:i" }}</td>
+                <td>
+                  <a href="{% url 'scheduling:appointment-detail' appointment.pk %}">
+                    {{ appointment.patient.display_name }}
+                  </a>
+                </td>
+                <td class="small">{{ appointment.professional.display_name }}</td>
+                <td><span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">Nenhum agendamento para hoje.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">Profissionais com mais atendimentos</div>
+      <ul class="list-group list-group-flush">
+        {% for item in top_professionals %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ item.professional__full_name }}</span>
+            <strong>{{ item.total }}</strong>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Sem dados no periodo.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Servicos mais utilizados</div>
+      <ul class="list-group list-group-flush">
+        {% for item in top_services %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ item.service__name }}</span>
+            <strong>{{ item.total }}</strong>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Sem dados no periodo.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if plan_limits %}
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          Uso do plano
+          {% if subscription %}<span class="badge text-bg-light">{{ subscription.plan.name }}</span>{% endif %}
+        </div>
+        <div class="card-body row g-3">
+          {% for limit in plan_limits %}
+            <div class="col-md-3">
+              <div class="d-flex justify-content-between small">
+                <span class="text-capitalize">{{ limit.resource }}</span>
+                <span>{{ limit.used }}{% if not limit.unlimited %}/{{ limit.limit }}{% else %} (ilimitado){% endif %}</span>
+              </div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar {% if limit.exceeded %}bg-danger{% endif %}"
+                     style="width: {{ limit.percent }}%"></div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ chart_days|json_script:"chartDaysLabels" }}
+{{ chart_day_values|json_script:"chartDaysValues" }}
+{{ chart_status_labels|json_script:"chartStatusLabels" }}
+{{ chart_status_values|json_script:"chartStatusValues" }}
+<script>
+(function () {
+  const read = (id) => JSON.parse(document.getElementById(id).textContent);
+  const primary = getComputedStyle(document.documentElement).getPropertyValue("--jja-primary").trim();
+
+  new Chart(document.getElementById("chartDays"), {
+    type: "line",
+    data: {
+      labels: read("chartDaysLabels"),
+      datasets: [{
+        label: "Agendamentos",
+        data: read("chartDaysValues"),
+        borderColor: primary,
+        backgroundColor: primary + "22",
+        fill: true,
+        tension: .35
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } },
+               scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  new Chart(document.getElementById("chartStatus"), {
+    type: "doughnut",
+    data: {
+      labels: read("chartStatusLabels"),
+      datasets: [{
+        data: read("chartStatusValues"),
+        backgroundColor: ["#6c757d", primary, "#0dcaf0", "#ffc107", "#198754", "#dc3545", "#212529"]
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}{% if form.instance.is_saved %}Editar clinica{% else %}Nova clinica{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+
+      {% if not form.instance.is_saved %}
+        <hr class="my-4">
+        <h6>Administrador da clinica (opcional)</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nome</label>
+            {{ form.admin_name }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">E-mail</label>
+            {{ form.admin_email }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Plano inicial</label>
+            {{ form.plan }}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Salvar</button>
+        <a class="btn btn-light" href="{% url 'platform:clinic-list' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

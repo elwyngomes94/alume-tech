@@ -1,0 +1,60 @@
+{% comment %}
+Botoes padronizados de relatorio/documento: PDF, Excel, Imprimir e
+Compartilhar no WhatsApp.
+
+Uso:
+    {% include "includes/report_actions.html" with pdf_url=... excel_url=... print_url=... whatsapp_text=... %}
+
+Parametros (todos opcionais -- o botao so aparece se a URL for informada):
+    pdf_url        URL de exportacao em PDF
+    excel_url      URL de exportacao em Excel
+    print_url      URL para impressao (se vazio, usa a pagina atual)
+    whatsapp_text  Mensagem padrao sugerida no compartilhamento
+{% endcomment %}
+<div class="btn-group flex-wrap" role="group">
+  {% if pdf_url %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ pdf_url }}">
+      <span aria-hidden="true">📄</span> PDF
+    </a>
+  {% endif %}
+  {% if excel_url %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ excel_url }}">
+      <span aria-hidden="true">📊</span> Excel
+    </a>
+  {% endif %}
+  <a class="btn btn-outline-secondary btn-sm no-print" href="{{ print_url|default:request.get_full_path }}"
+     onclick="window.print(); return false;">
+    <span aria-hidden="true">🖨️</span> Imprimir
+  </a>
+  <button type="button" class="btn btn-outline-success btn-sm no-print" data-bs-toggle="modal"
+          data-bs-target="#reportShareModal">
+    <span aria-hidden="true">📱</span> WhatsApp
+  </button>
+</div>
+
+<div class="modal fade" id="reportShareModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Compartilhar no WhatsApp</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" for="reportShareText">Mensagem</label>
+        <textarea class="form-control" id="reportShareText" rows="4">{{ whatsapp_text|default:"Ola! Segue o relatorio solicitado." }}{% if pdf_url %}
+
+{{ request.scheme }}://{{ request.get_host }}{{ pdf_url }}{% endif %}</textarea>
+        <p class="form-text mb-0">
+          O WhatsApp nao permite anexar arquivos automaticamente por link. Baixe o PDF acima
+          e anexe manualmente na conversa, se preferir enviar o arquivo em vez do link.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" onclick="JJA.shareOnWhatsApp(document.getElementById('reportShareText').value)">
+          Abrir WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

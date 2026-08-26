@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}jja-auth-body{% endblock %}
+
+{% block body %}
+<div class="jja-auth">
+  <div class="jja-auth-brand">
+    <img src="{% static 'img/jja-logo.png' %}" alt="{{ PLATFORM_NAME }}" class="jja-auth-logo">
+    <h1 class="visually-hidden">{{ PLATFORM_NAME }}</h1>
+    <p>Sistema integrado de gestao para clinicas.</p>
+    <ul>
+      <li><i class="bi bi-shield-lock"></i> Dados isolados por clinica</li>
+      <li><i class="bi bi-journal-medical"></i> Prontuario adaptavel a cada especialidade</li>
+      <li><i class="bi bi-clipboard-check"></i> Auditoria completa e conformidade com a LGPD</li>
+    </ul>
+  </div>
+
+  <div class="jja-auth-card">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h5 mb-1">{% block auth_title %}Acessar{% endblock %}</h2>
+        <p class="text-body-secondary small">{% block auth_subtitle %}{% endblock %}</p>
+        {% include "includes/messages.html" %}
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+    <p class="text-center text-body-secondary small mt-3">
+      Suporte: {{ PLATFORM_SUPPORT_EMAIL }}
+    </p>
+  </div>
+</div>
+{% endblock %}

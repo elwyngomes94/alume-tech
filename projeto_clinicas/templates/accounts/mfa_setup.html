@@ -1,0 +1,53 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Ativar autenticacao em dois fatores{% endblock %}
+{% block page_subtitle %}Camada extra de protecao para contas com acesso a dados de saude.{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <ol class="mb-4">
+          <li>Instale um aplicativo autenticador (Google Authenticator, Authy, Microsoft Authenticator ou 1Password).</li>
+          <li>Cadastre a chave abaixo manualmente ou pelo QR Code.</li>
+          <li>Informe o codigo de 6 digitos exibido pelo aplicativo para confirmar.</li>
+        </ol>
+
+        <div class="mb-3">
+          <label class="form-label">Chave secreta</label>
+          <input class="form-control font-monospace" value="{{ secret }}" readonly>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">URI de provisionamento (otpauth)</label>
+          <textarea class="form-control font-monospace" rows="3" readonly>{{ provisioning_uri }}</textarea>
+          <div class="form-text">
+            Cole esta URI no aplicativo autenticador ou gere um QR Code a partir dela.
+          </div>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3 col-md-5">
+            <label class="form-label" for="{{ form.code.id_for_label }}">Codigo de confirmacao</label>
+            {{ form.code }}
+            {% for error in form.code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <button class="btn btn-primary" type="submit">Ativar MFA</button>
+          <a class="btn btn-light" href="{% url 'accounts:security' %}">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="alert alert-info">
+      <strong>Por que ativar?</strong>
+      <p class="mb-0 small">
+        Mesmo que sua senha seja descoberta, o acesso continua bloqueado sem o
+        codigo do seu dispositivo. Recomendado para todos os perfis com acesso
+        a prontuarios.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

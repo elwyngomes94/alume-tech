@@ -1,0 +1,156 @@
+{% comment %}
+Menu lateral da clinica.
+
+Cada item so aparece quando o usuario possui a permissao correspondente. Isso
+e apenas conveniencia visual -- a autorizacao real acontece no backend.
+{% endcomment %}
+{% load static %}
+<aside class="jja-sidebar" id="jjaSidebar">
+  <div class="jja-brand">
+    {% if active_clinic and active_clinic.logo %}
+      <img src="{{ active_clinic.logo.url }}" alt="{{ active_clinic }}" class="jja-brand-logo">
+    {% else %}
+      <img src="{% static 'img/jja-mark.png' %}" alt="Alume Tech" class="jja-brand-logo">
+    {% endif %}
+    <div class="jja-brand-text">
+      <strong>{{ active_clinic|default:PLATFORM_NAME }}</strong>
+      <small>{% if active_clinic %}{{ active_clinic.get_clinic_type_display }}{% else %}Plataforma{% endif %}</small>
+    </div>
+  </div>
+
+  <nav class="jja-nav">
+    <a href="{% url 'dashboard:home' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'dashboard' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i> Painel
+    </a>
+
+    {% if perms_clinic.appointment_view %}
+      <div class="jja-nav-group">Atendimento</div>
+      <a href="{% url 'scheduling:agenda-day' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'scheduling' %}active{% endif %}">
+        <i class="bi bi-calendar3"></i> Agenda
+      </a>
+      <a href="{% url 'scheduling:waiting-list' %}" class="jja-nav-link">
+        <i class="bi bi-hourglass-split"></i> Lista de espera
+      </a>
+      {% if perms_clinic.appointment_payment and active_clinic.has_module_finance %}
+        <a href="{% url 'finance:pending-payments' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'pending-payments' %}active{% endif %}">
+          <i class="bi bi-cash"></i> Pagamentos pendentes
+        </a>
+      {% endif %}
+    {% endif %}
+
+    {% if perms_clinic.patient_view %}
+      <a href="{% url 'patients:list' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'patients' %}active{% endif %}">
+        <i class="bi bi-people"></i> Pacientes
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.medicalrecord_view %}
+      <div class="jja-nav-group">Clinico</div>
+      <a href="{% url 'medical_records:template-list' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'medical_records' %}active{% endif %}">
+        <i class="bi bi-journal-medical"></i> Prontuarios
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.examination_view %}
+      <a href="{% url 'examinations:request-list' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'examinations' %}active{% endif %}">
+        <i class="bi bi-clipboard2-pulse"></i> Exames
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.document_view %}
+      <a href="{% url 'documents:list' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'documents' %}active{% endif %}">
+        <i class="bi bi-folder2-open"></i> Documentos
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.finance_view and active_clinic.has_module_finance %}
+      <div class="jja-nav-group">Financeiro</div>
+      <a href="{% url 'finance:dashboard' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'finance' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-cash-coin"></i> Dashboard financeiro
+      </a>
+      <a href="{% url 'finance:receivable-list' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'receivable-list' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Contas a receber
+      </a>
+      <a href="{% url 'finance:payable-list' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'payable-list' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Contas a pagar
+      </a>
+      <a href="{% url 'finance:cashflow' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'cashflow' %}active{% endif %}">
+        <i class="bi bi-graph-up"></i> Fluxo de caixa
+      </a>
+      {% if perms_clinic.finance_commission_view %}
+        <a href="{% url 'finance:commission-list' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'commission-list' %}active{% endif %}">
+          <i class="bi bi-percent"></i> Comissoes
+        </a>
+      {% endif %}
+      {% if perms_clinic.finance_category_manage %}
+        <a href="{% url 'finance:settings' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'settings' and request.resolver_match.namespace == 'finance' %}active{% endif %}">
+          <i class="bi bi-tags"></i> Categorias/config.
+        </a>
+      {% endif %}
+    {% endif %}
+
+    {% if perms_clinic.automation_view and active_clinic.has_module_automation %}
+      <div class="jja-nav-group">Automacao</div>
+      <a href="{% url 'automation:settings' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'automation' and request.resolver_match.url_name == 'settings' %}active{% endif %}">
+        <i class="bi bi-magic"></i> Automacoes
+      </a>
+      <a href="{% url 'automation:execution-list' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'execution-list' %}active{% endif %}">
+        <i class="bi bi-clock-history"></i> Historico
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.professional_view %}
+      <div class="jja-nav-group">Gestao</div>
+      <a href="{% url 'professionals:list' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'professionals' %}active{% endif %}">
+        <i class="bi bi-person-badge"></i> Profissionais
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.user_view %}
+      <a href="{% url 'accounts:user-list' %}" class="jja-nav-link">
+        <i class="bi bi-person-gear"></i> Usuarios
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.report_view %}
+      <a href="{% url 'reports:home' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'reports' %}active{% endif %}">
+        <i class="bi bi-bar-chart"></i> Relatorios
+      </a>
+    {% endif %}
+
+    {% if perms_clinic.clinic_view %}
+      <div class="jja-nav-group">Configuracoes</div>
+      <a href="{% url 'clinics:catalog' %}" class="jja-nav-link">
+        <i class="bi bi-list-check"></i> Cadastros
+      </a>
+    {% endif %}
+    {% if perms_clinic.clinic_settings %}
+      <a href="{% url 'clinics:settings' %}" class="jja-nav-link">
+        <i class="bi bi-sliders"></i> Configuracoes
+      </a>
+    {% endif %}
+    {% if perms_clinic.lgpd_manage %}
+      <a href="{% url 'lgpd:dashboard' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'lgpd' %}active{% endif %}">
+        <i class="bi bi-shield-lock"></i> LGPD
+      </a>
+    {% endif %}
+    {% if perms_clinic.audit_view %}
+      <a href="{% url 'audit:list' %}" class="jja-nav-link">
+        <i class="bi bi-clipboard-check"></i> Auditoria
+      </a>
+    {% endif %}
+    {% if perms_clinic.billing_view %}
+      <a href="{% url 'clinics:billing' %}" class="jja-nav-link">
+        <i class="bi bi-credit-card"></i> Plano
+      </a>
+    {% endif %}
+
+    {% if user.is_superadmin %}
+      <div class="jja-nav-group">Plataforma</div>
+      <a href="{% url 'platform:dashboard' %}" class="jja-nav-link">
+        <i class="bi bi-hdd-network"></i> Alume Tech
+      </a>
+    {% endif %}
+  </nav>
+</aside>
+<div class="jja-sidebar-backdrop" id="jjaSidebarBackdrop"></div>

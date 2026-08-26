@@ -1,0 +1,121 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}Dashboard global{% endblock %}
+{% block page_subtitle %}Visao consolidada de todas as clinicas do Alume Tech.{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Clinicas</div><div class="value">{{ metrics.clinics_total }}</div>
+    <div class="hint">{{ metrics.clinics_active }} ativas / {{ metrics.clinics_trial }} em avaliacao</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Usuarios ativos</div><div class="value">{{ metrics.users_total }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Pacientes</div><div class="value">{{ metrics.patients_total }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Taxa de utilizacao</div><div class="value">{{ metrics.utilization_rate }}%</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header">Clinicas por tipo</div>
+      <div class="card-body"><canvas id="chartType" height="220"></canvas></div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header">Crescimento de clinicas</div>
+      <div class="card-body"><canvas id="chartGrowth" height="220"></canvas></div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Alertas de seguranca (24h)</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>{{ metrics.failed_logins_24h }}</strong> tentativas de login com falha</p>
+        <p class="mb-0"><strong>{{ metrics.denied_events_24h }}</strong> acessos negados</p>
+        <a class="btn btn-sm btn-outline-danger mt-3" href="{% url 'platform:security' %}">Ver monitoramento</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Clinicas recentes</span><a class="small" href="{% url 'platform:clinic-list' %}">Ver todas</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for clinic in recent_clinics %}
+          <li class="list-group-item d-flex justify-content-between">
+            <a href="{% url 'platform:clinic-detail' clinic.pk %}">{{ clinic }}</a>
+            <span class="badge text-bg-light border">{{ clinic.get_status_display }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma clinica cadastrada.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Auditoria recente</span><a class="small" href="{% url 'platform:audit' %}">Ver tudo</a>
+      </div>
+      <ul class="list-group list-group-flush small">
+        {% for log in recent_audit %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ log.user_email }} - {{ log.action_label }}</span>
+            <span class="text-body-secondary">{{ log.created_at|date:"d/m H:i" }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Sem eventos registrados.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">Automacoes (todas as clinicas)</div>
+      <div class="card-body">
+        <div class="row g-2 mb-3 text-center">
+          <div class="col-4"><div class="jja-stat"><div class="label">Execucoes</div><div class="value">{{ automation_totals.total }}</div></div></div>
+          <div class="col-4"><div class="jja-stat"><div class="label">Sucesso</div><div class="value text-success">{{ automation_totals.success }}</div></div></div>
+          <div class="col-4"><div class="jja-stat"><div class="label">Falhas</div><div class="value text-danger">{{ automation_totals.failed }}</div></div></div>
+        </div>
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Automacao</th><th>Status</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for item in automation_by_type %}
+              <tr>
+                <td class="small">{{ item.automation__name }}</td>
+                <td><span class="badge text-bg-light border">{{ item.status }}</span></td>
+                <td class="text-end">{{ item.total }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3" class="text-body-secondary">Nenhuma automacao executada ainda.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ chart_type_labels|json_script:"typeLabels" }}
+{{ chart_type_values|json_script:"typeValues" }}
+{{ chart_growth_labels|json_script:"growthLabels" }}
+{{ chart_growth_values|json_script:"growthValues" }}
+<script>
+(function () {
+  const read = (id) => JSON.parse(document.getElementById(id).textContent);
+  new Chart(document.getElementById("chartType"), {
+    type: "pie",
+    data: { labels: read("typeLabels"),
+            datasets: [{ data: read("typeValues"),
+                        backgroundColor: ["#0b5ed7","#0dcaf0","#198754","#ffc107","#dc3545","#6c757d","#6610f2","#fd7e14","#20c997","#d63384"] }] }
+  });
+  new Chart(document.getElementById("chartGrowth"), {
+    type: "line",
+    data: { labels: read("growthLabels"), datasets: [{ data: read("growthValues"), borderColor: "#0b5ed7", tension: .3, fill: false }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+})();
+</script>
+{% endblock %}

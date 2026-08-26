@@ -1,0 +1,71 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Cadastros da clinica{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Especialidades</span>
+        {% if perms_clinic.specialty_manage %}<a class="small" href="{% url 'clinics:specialty-create' %}">Adicionar</a>{% endif %}
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for item in specialties %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span><span class="badge" style="background:{{ item.color }}">&nbsp;</span> {{ item.name }}</span>
+            <a class="small" href="{% url 'clinics:specialty-update' item.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma especialidade.</li>{% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Salas</span>
+        {% if perms_clinic.room_manage %}<a class="small" href="{% url 'clinics:room-create' %}">Adicionar</a>{% endif %}
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for item in rooms %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ item.name }}</span>
+            <a class="small" href="{% url 'clinics:room-update' item.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma sala.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Servicos</span>
+        {% if perms_clinic.service_manage %}<a class="small" href="{% url 'clinics:service-create' %}">Adicionar</a>{% endif %}
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for item in services %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ item.name }} <small class="text-body-secondary">({{ item.duration_minutes }} min)</small></span>
+            <a class="small" href="{% url 'clinics:service-update' item.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum servico.</li>{% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Convenios</span>
+        {% if perms_clinic.insurance_manage %}<a class="small" href="{% url 'clinics:insurance-create' %}">Adicionar</a>{% endif %}
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for item in insurances %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ item.name }}</span>
+            <a class="small" href="{% url 'clinics:insurance-update' item.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum convenio.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

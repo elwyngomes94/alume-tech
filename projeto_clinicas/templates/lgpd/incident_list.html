@@ -1,0 +1,26 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Incidentes de seguranca{% endblock %}
+{% block page_actions %}<a class="btn btn-primary" href="{% url 'lgpd:incident-create' %}">Registrar incidente</a>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Titulo</th><th>Severidade</th><th>Detectado em</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for incident in incidents %}
+          <tr>
+            <td>{{ incident.title }}</td>
+            <td><span class="badge text-bg-{% if incident.severity == 'critical' %}danger{% elif incident.severity == 'high' %}warning{% else %}secondary{% endif %}">{{ incident.get_severity_display }}</span></td>
+            <td class="small">{{ incident.detected_at|date:"d/m/Y H:i" }}</td>
+            <td><span class="badge text-bg-light border">{{ incident.get_status_display }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="text-body-secondary">Nenhum incidente registrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

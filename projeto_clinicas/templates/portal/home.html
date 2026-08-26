@@ -1,0 +1,54 @@
+{% extends "layouts/portal.html" %}
+
+{% block page_title %}Ola, {{ patient.display_name }}{% endblock %}
+{% block page_subtitle %}Este e o seu espaco pessoal em {{ clinic }}.{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Proximos agendamentos</span>
+        <a class="small" href="{% url 'portal:appointment-request' %}">Solicitar agendamento</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for appointment in next_appointments %}
+          <li class="list-group-item">
+            <strong>{{ appointment.start_at|date:"d/m/Y H:i" }}</strong><br>
+            <span class="small">{{ appointment.professional.display_name }} - {{ appointment.service|default:"" }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum agendamento futuro.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Atendimentos anteriores</div>
+      <ul class="list-group list-group-flush">
+        {% for appointment in past_appointments %}
+          <li class="list-group-item small">{{ appointment.start_at|date:"d/m/Y" }} - {{ appointment.professional.display_name }}</li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum historico.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header">Documentos recentes</div>
+      <ul class="list-group list-group-flush">
+        {% for document in documents %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ document.title }}</span>
+            <a class="small" href="{% url 'portal:document-download' document.pk %}">Baixar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum documento liberado.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Exames</div>
+      <ul class="list-group list-group-flush">
+        {% for item in exams %}
+          <li class="list-group-item">Solicitacao #{{ item.number }} - {{ item.get_status_display }}</li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum exame liberado.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

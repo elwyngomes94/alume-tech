@@ -1,0 +1,191 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Prontuario - {{ patient.display_name }}{% endblock %}
+{% block page_subtitle %}Prontuario #{{ patient.record_number }}{% endblock %}
+
+{% block page_actions %}
+  {% if can_add %}
+    <a class="btn btn-primary" href="{% url 'medical_records:entry-create' patient.pk %}">
+      <i class="bi bi-plus-lg"></i> Novo atendimento
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<ul class="nav nav-tabs mb-3" id="jjaRecordTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabResumo" type="button">Resumo</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistorico" type="button">Historico</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPrescricoes" type="button">Prescricoes/Documentos</button>
+  </li>
+  {% if exam_requests is not None %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabExames" type="button">Exames</button>
+    </li>
+  {% endif %}
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDocumentos" type="button">Documentos anexados</button>
+  </li>
+  {% if receivables is not None %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFinanceiro" type="button">Financeiro</button>
+    </li>
+  {% endif %}
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tabResumo" role="tabpanel">
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="card mb-3">
+          <div class="card-header">Alertas</div>
+          <div class="card-body small">{{ record.alerts|default:"Nenhum alerta registrado."|linebreaksbr }}</div>
+        </div>
+        <div class="card">
+          <div class="card-header">Resumo clinico</div>
+          <div class="card-body small">{{ record.summary|default:"Sem resumo registrado."|linebreaksbr }}</div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">Ultimos atendimentos</div>
+          <ul class="list-group list-group-flush">
+            {% for entry in entries|slice:":5" %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="{% url 'medical_records:entry-detail' entry.pk %}">{{ entry.title|default:entry.template.name|default:"Atendimento" }}</a>
+                <span class="text-body-secondary small">{{ entry.attended_at|date:"d/m/Y" }}</span>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-body-secondary">Nenhum atendimento registrado ainda.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tabHistorico" role="tabpanel">
+    <div class="jja-timeline">
+      {% for entry in entries %}
+        <div class="jja-timeline-item">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <a href="{% url 'medical_records:entry-detail' entry.pk %}">
+                    <strong>{{ entry.title|default:entry.template.name|default:"Atendimento" }}</strong>
+                  </a>
+                  <div class="small text-body-secondary">
+                    {{ entry.attended_at|date:"d/m/Y H:i" }} &middot; {{ entry.professional.display_name }}
+                  </div>
+                </div>
+                {% if entry.is_draft %}
+                  <span class="badge text-bg-warning">Rascunho</span>
+                {% else %}
+                  <span class="badge text-bg-success">Assinado</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-body-secondary">Nenhum atendimento registrado ainda.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tabPrescricoes" role="tabpanel">
+    <div class="card">
+      <div class="card-header">Prescricoes e documentos gerados</div>
+      <ul class="list-group list-group-flush">
+        {% for prescription in prescriptions %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <a href="{% url 'medical_records:prescription-detail' prescription.pk %}">{{ prescription.get_kind_display }}</a>
+              <div class="small text-body-secondary">{{ prescription.professional.display_name }}</div>
+            </div>
+            <span class="text-body-secondary small">{{ prescription.issued_at|date:"d/m/Y" }}</span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhuma prescricao/documento emitido.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if exam_requests is not None %}
+    <div class="tab-pane fade" id="tabExames" role="tabpanel">
+      <div class="card">
+        <div class="card-header">Exames solicitados</div>
+        <ul class="list-group list-group-flush">
+          {% for request_obj in exam_requests %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{% url 'examinations:request-detail' request_obj.pk %}">{{ request_obj.professional.display_name }}</a>
+              <span class="badge text-bg-{% if request_obj.status == 'completed' %}success{% elif request_obj.status == 'canceled' %}secondary{% else %}warning{% endif %}">
+                {{ request_obj.get_status_display }}
+              </span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-body-secondary">Nenhum exame solicitado.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="tab-pane fade" id="tabDocumentos" role="tabpanel">
+    <div class="card">
+      <div class="card-header">Documentos anexados</div>
+      <ul class="list-group list-group-flush">
+        {% for document in documents %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span>{{ document.title }}</span>
+              <div class="small text-body-secondary">
+                {{ document.category|default:"-" }} &middot; {{ document.uploaded_by|default:"-" }} &middot; {{ document.created_at|date:"d/m/Y" }}
+              </div>
+            </div>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'documents:download' document.pk %}">Baixar</a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum documento anexado.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if receivables is not None %}
+    <div class="tab-pane fade" id="tabFinanceiro" role="tabpanel">
+      <div class="card">
+        <div class="card-header">Financeiro do paciente</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Data</th><th>Servico</th><th>Valor</th><th>Saldo</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for item in receivables %}
+                <tr>
+                  <td class="small">{{ item.service_date|date:"d/m/Y" }}</td>
+                  <td class="small">{{ item.service|default:item.description }}</td>
+                  <td>R$ {{ item.net_amount|floatformat:2 }}</td>
+                  <td>R$ {{ item.balance|floatformat:2 }}</td>
+                  <td>
+                    <span class="badge text-bg-{% if item.status == 'paid' %}success{% elif item.status == 'overdue' %}danger{% elif item.status == 'partial' %}warning{% else %}light border{% endif %}">
+                      {{ item.get_status_display }}
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" class="text-body-secondary">Nenhum lancamento financeiro para este paciente.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

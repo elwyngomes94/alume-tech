@@ -1,0 +1,14 @@
+{% extends "layouts/app.html" %}
+{% block page_title %}Registrar incidente de seguranca{% endblock %}
+{% block content %}
+<div class="card"><div class="card-body">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "includes/form.html" with form=form %}
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Registrar</button>
+      <a class="btn btn-light" href="{% url 'lgpd:incident-list' %}">Cancelar</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

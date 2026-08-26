@@ -1,0 +1,104 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Painel da recepcao{% endblock %}
+{% block page_subtitle %}{{ today_summary.total }} agendamento(s) hoje{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Hoje</div>
+      <div class="value">{{ today_summary.total }}</div>
+      <div class="hint">{{ today_summary.waiting }} aguardando atendimento</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Confirmados</div>
+      <div class="value">{{ today_summary.confirmed }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Cancelados/Faltas</div>
+      <div class="value">{{ today_summary.canceled|add:today_summary.no_show }}</div>
+    </div>
+  </div>
+  {% if can_manage_payment %}
+    <div class="col-6 col-lg-3">
+      <div class="jja-stat">
+        <div class="label">Pendente hoje</div>
+        <div class="value">R$ {{ payments_pending_today|floatformat:2 }}</div>
+        <div class="hint">{{ payments_pending_count }} pagamento(s) em aberto</div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Agenda de hoje</span>
+        <a class="small" href="{% url 'scheduling:agenda-day' %}">Ver agenda completa</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Hora</th><th>Paciente</th><th>Profissional</th><th>Status</th><th>Pagamento</th><th></th></tr></thead>
+          <tbody>
+            {% for appointment in today_appointments %}
+              <tr>
+                <td>{{ appointment.start_at|time:"H:i" }}</td>
+                <td>{{ appointment.patient.display_name }}</td>
+                <td class="small">{{ appointment.professional.display_name }}</td>
+                <td><span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span></td>
+                <td>
+                  {% if appointment.payment_badge %}
+                    <span class="badge text-bg-{{ appointment.payment_badge.css }}">
+                      {{ appointment.payment_badge.emoji }} {{ appointment.payment_badge.label }}
+                    </span>
+                  {% else %}
+                    <span class="text-body-secondary small">-</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'scheduling:appointment-detail' appointment.pk %}">Abrir</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6" class="text-body-secondary">Sem atendimentos hoje.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Aguardando atendimento</div>
+      <ul class="list-group list-group-flush">
+        {% for appointment in waiting_now %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ appointment.patient.display_name }}</span>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'scheduling:appointment-detail' appointment.pk %}">Ver</a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Ninguem aguardando no momento.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% if can_manage_payment %}
+      <div class="card">
+        <div class="card-header">Financeiro</div>
+        <div class="card-body small">
+          <p class="mb-1">Recebido hoje: <strong>R$ {{ payments_received_today|floatformat:2 }}</strong></p>
+          <p class="mb-3">Pendente hoje: <strong>R$ {{ payments_pending_today|floatformat:2 }}</strong></p>
+          <a class="btn btn-sm btn-success w-100" href="{% url 'finance:pending-payments' %}">Ver pagamentos pendentes</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

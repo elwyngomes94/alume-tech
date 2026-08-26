@@ -1,0 +1,29 @@
+{% comment %}Filtros comuns as visualizacoes de agenda (dia/semana/mes/lista).{% endcomment %}
+<form class="jja-filters d-flex flex-wrap gap-2 align-items-end" method="get">
+  <div>
+    <label class="form-label small mb-0">Profissional</label>
+    <select class="form-select form-select-sm" name="professional" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for professional in professionals %}
+        <option value="{{ professional.pk }}" {% if request.GET.professional == professional.pk|stringformat:"s" %}selected{% endif %}>
+          {{ professional.display_name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label small mb-0">Data</label>
+    <input class="form-control form-control-sm" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
+           onchange="this.form.submit()">
+  </div>
+  <div class="btn-group btn-group-sm" role="group">
+    <a class="btn btn-outline-secondary {% if request.resolver_match.url_name == 'agenda-day' %}active{% endif %}"
+       href="{% url 'scheduling:agenda-day' %}?date={{ selected_date|date:'Y-m-d' }}">Dia</a>
+    <a class="btn btn-outline-secondary {% if request.resolver_match.url_name == 'agenda-week' %}active{% endif %}"
+       href="{% url 'scheduling:agenda-week' %}?date={{ selected_date|date:'Y-m-d' }}">Semana</a>
+    <a class="btn btn-outline-secondary {% if request.resolver_match.url_name == 'agenda-month' %}active{% endif %}"
+       href="{% url 'scheduling:agenda-month' %}?date={{ selected_date|date:'Y-m-d' }}">Mes</a>
+    <a class="btn btn-outline-secondary {% if request.resolver_match.url_name == 'agenda-list' %}active{% endif %}"
+       href="{% url 'scheduling:agenda-list' %}">Lista</a>
+  </div>
+</form>

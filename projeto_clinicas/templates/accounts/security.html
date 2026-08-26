@@ -1,0 +1,130 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Seguranca da conta{% endblock %}
+{% block page_subtitle %}Senha, autenticacao em dois fatores, sessoes e tokens de API.{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Autenticacao</div>
+      <div class="card-body">
+        <p class="mb-2">
+          <strong>Senha</strong><br>
+          <span class="text-body-secondary small">
+            Ultima alteracao:
+            {{ user.password_changed_at|date:"d/m/Y H:i"|default:"nao registrada" }}
+          </span>
+        </p>
+        <a class="btn btn-outline-primary btn-sm mb-4" href="{% url 'accounts:password-change' %}">
+          Alterar senha
+        </a>
+
+        <p class="mb-2">
+          <strong>Autenticacao em dois fatores (MFA)</strong><br>
+          {% if user.mfa_enabled %}
+            <span class="badge text-bg-success">Ativa</span>
+            <span class="text-body-secondary small">desde {{ user.mfa_confirmed_at|date:"d/m/Y" }}</span>
+          {% else %}
+            <span class="badge text-bg-secondary">Inativa</span>
+          {% endif %}
+        </p>
+        {% if user.mfa_enabled %}
+          <form method="post" action="{% url 'accounts:mfa-disable' %}"
+                data-confirm="Desativar o MFA reduz a seguranca da conta. Confirmar?">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm" type="submit">Desativar MFA</button>
+          </form>
+        {% else %}
+          <a class="btn btn-primary btn-sm" href="{% url 'accounts:mfa-setup' %}">Ativar MFA</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Sessoes ativas</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr><th>Dispositivo</th><th>IP</th><th>Ultimo acesso</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for session in sessions %}
+              <tr>
+                <td class="small">
+                  {{ session.user_agent|truncatechars:42|default:"-" }}
+                  {% if session.session_key == current_session_key %}
+                    <span class="badge text-bg-primary">esta sessao</span>
+                  {% endif %}
+                </td>
+                <td class="small">{{ session.ip_address|default:"-" }}</td>
+                <td class="small">{{ session.last_activity|date:"d/m/Y H:i" }}</td>
+                <td class="text-end">
+                  {% if session.session_key != current_session_key %}
+                    <form method="post" action="{% url 'accounts:session-revoke' session.pk %}">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Encerrar</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">Nenhuma sessao registrada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Tokens de API</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'accounts:token-create' %}" class="row g-2 align-items-end mb-3">
+          {% csrf_token %}
+          <div class="col-md-5">
+            <label class="form-label">Descricao</label>
+            {{ token_form.name }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Validade (dias)</label>
+            {{ token_form.expires_in_days }}
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-primary" type="submit">Gerar token</button>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Descricao</th><th>Prefixo</th><th>Clinica</th><th>Expira</th><th>Ultimo uso</th><th></th></tr></thead>
+            <tbody>
+              {% for token in api_tokens %}
+                <tr>
+                  <td>{{ token.name }}</td>
+                  <td><code>{{ token.prefix }}...</code></td>
+                  <td class="small">{{ token.clinic|default:"Todas as clinicas do usuario" }}</td>
+                  <td class="small">{{ token.expires_at|date:"d/m/Y"|default:"-" }}</td>
+                  <td class="small">{{ token.last_used_at|date:"d/m/Y H:i"|default:"nunca" }}</td>
+                  <td class="text-end">
+                    <form method="post" action="{% url 'accounts:token-revoke' token.pk %}"
+                          data-confirm="Revogar este token?">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Revogar</button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="6" class="text-body-secondary">Nenhum token ativo.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

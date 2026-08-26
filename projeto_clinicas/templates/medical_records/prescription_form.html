@@ -1,0 +1,19 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Nova prescricao{% endblock %}
+{% block page_subtitle %}{{ patient.display_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Emitir</button>
+        <a class="btn btn-light" href="{% url 'medical_records:entry-detail' entry.pk %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

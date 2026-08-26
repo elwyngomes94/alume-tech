@@ -1,0 +1,53 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Consentimentos{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Paciente</th><th>Termo</th><th>Data</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for consent in consents %}
+              <tr>
+                <td>{{ consent.patient.display_name }}</td>
+                <td class="small">{{ consent.consent_type.name }}</td>
+                <td class="small">{{ consent.granted_at|date:"d/m/Y" }}</td>
+                <td>
+                  {% if consent.is_valid %}<span class="badge text-bg-success">Valido</span>
+                  {% else %}<span class="badge text-bg-secondary">Revogado</span>{% endif %}
+                </td>
+                <td class="text-end">
+                  {% if consent.is_valid %}
+                    <form method="post" action="{% url 'lgpd:consent-revoke' consent.pk %}" class="d-inline">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Revogar</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-body-secondary">Nenhum consentimento registrado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% include "includes/pagination.html" %}
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Registrar consentimento</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'lgpd:consent-create' %}" novalidate>
+          {% csrf_token %}
+          {% include "includes/form.html" with form=form %}
+          <button class="btn btn-primary w-100 mt-3" type="submit">Registrar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

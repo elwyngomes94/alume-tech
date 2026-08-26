@@ -1,0 +1,15 @@
+{% extends "layouts/portal.html" %}
+
+{% block page_title %}Solicitar agendamento{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <button class="btn btn-primary mt-3" type="submit">Enviar solicitacao</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

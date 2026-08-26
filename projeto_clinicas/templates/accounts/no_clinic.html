@@ -1,0 +1,14 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_title %}Sem vinculo ativo{% endblock %}
+
+{% block content %}
+<p>
+  Sua conta esta ativa, mas nao possui vinculo com nenhuma clinica no momento.
+  Solicite ao administrador da clinica que libere o seu acesso.
+</p>
+<form method="post" action="{% url 'accounts:logout' %}">
+  {% csrf_token %}
+  <button class="btn btn-outline-secondary w-100" type="submit">Sair</button>
+</form>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Notificacoes{% endblock %}
+{% block page_actions %}
+  <form method="post" action="{% url 'notifications:read-all' %}">
+    {% csrf_token %}
+    <button class="btn btn-outline-secondary">Marcar todas como lidas</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <ul class="list-group list-group-flush">
+    {% for notification in notifications %}
+      <li class="list-group-item d-flex justify-content-between align-items-start {% if not notification.is_read %}bg-light{% endif %}">
+        <div>
+          <span class="badge text-bg-{{ notification.level }}">{{ notification.get_event_display }}</span>
+          <strong class="d-block">{{ notification.title }}</strong>
+          <span class="small text-body-secondary">{{ notification.message }}</span>
+          <div class="small text-body-secondary">{{ notification.created_at|date:"d/m/Y H:i" }}</div>
+        </div>
+        {% if not notification.is_read %}
+          <form method="post" action="{% url 'notifications:read' notification.pk %}">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Marcar como lida</button>
+          </form>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="list-group-item text-body-secondary">Nenhuma notificacao.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

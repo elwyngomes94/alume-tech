@@ -1,0 +1,75 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ professional.display_name }}{% endblock %}
+{% block page_subtitle %}{{ professional.registry_label }}{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.professional_change %}
+    <a class="btn btn-primary" href="{% url 'professionals:update' professional.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Dados</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5">E-mail</dt><dd class="col-7">{{ professional.email|default:"-" }}</dd>
+          <dt class="col-5">Telefone</dt><dd class="col-7">{{ professional.phone|default:"-" }}</dd>
+          <dt class="col-5">Duracao padrao</dt><dd class="col-7">{{ professional.appointment_duration }} min</dd>
+          <dt class="col-5">Portal do paciente</dt>
+          <dd class="col-7">{% if professional.accepts_online_scheduling %}Habilitado{% else %}Desabilitado{% endif %}</dd>
+        </dl>
+        <hr>
+        <strong>Especialidades:</strong>
+        <p>{% for s in professional.specialties.all %}<span class="badge text-bg-light border">{{ s.name }}</span> {% empty %}-{% endfor %}</p>
+        <strong>Servicos:</strong>
+        <p class="mb-0">{% for s in professional.services.all %}<span class="badge text-bg-light border">{{ s.name }}</span> {% empty %}-{% endfor %}</p>
+      </div>
+    </div>
+    {% if professional.biography %}
+      <div class="card">
+        <div class="card-header">Biografia</div>
+        <div class="card-body small">{{ professional.biography|linebreaksbr }}</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Disponibilidade</span>
+        {% if perms_clinic.schedule_manage %}
+          <a class="small" href="{% url 'scheduling:schedule-create' %}">Adicionar horario</a>
+        {% endif %}
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for schedule in schedules %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ schedule.get_weekday_display }}</span>
+            <span>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhuma disponibilidade cadastrada.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Proximos agendamentos</div>
+      <ul class="list-group list-group-flush">
+        {% for appointment in next_appointments %}
+          <li class="list-group-item d-flex justify-content-between">
+            <a href="{% url 'scheduling:appointment-detail' appointment.pk %}">{{ appointment.patient.display_name }}</a>
+            <span class="text-body-secondary small">{{ appointment.start_at|date:"d/m/Y H:i" }}</span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum agendamento futuro.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

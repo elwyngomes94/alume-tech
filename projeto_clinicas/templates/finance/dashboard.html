@@ -1,0 +1,111 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Financeiro{% endblock %}
+{% block page_subtitle %}Periodo: {{ start|date:"d/m/Y" }} a {{ end|date:"d/m/Y" }}{% endblock %}
+
+{% block page_actions %}
+<form method="get" class="d-flex gap-2">
+  <select class="form-select form-select-sm" name="period" onchange="this.form.submit()">
+    <option value="today" {% if period == 'today' %}selected{% endif %}>Hoje</option>
+    <option value="7d" {% if period == '7d' %}selected{% endif %}>Esta semana</option>
+    <option value="30d" {% if period == '30d' %}selected{% endif %}>Este mes</option>
+    <option value="90d" {% if period == '90d' %}selected{% endif %}>90 dias</option>
+    <option value="12m" {% if period == '12m' %}selected{% endif %}>Este ano</option>
+  </select>
+</form>
+{% if perms_clinic.finance_add %}
+  <a class="btn btn-outline-primary btn-sm" href="{% url 'finance:receivable-create' %}">
+    <i class="bi bi-plus-lg"></i> Receita
+  </a>
+  <a class="btn btn-outline-danger btn-sm" href="{% url 'finance:payable-create' %}">
+    <i class="bi bi-plus-lg"></i> Despesa
+  </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Saldo atual</div>
+      <div class="value">R$ {{ summary.current_balance|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Entradas do periodo</div>
+      <div class="value text-success">R$ {{ summary.period_income|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Saidas do periodo</div>
+      <div class="value text-danger">R$ {{ summary.period_expense|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Resultado do periodo</div>
+      <div class="value {% if summary.period_result < 0 %}text-danger{% else %}text-success{% endif %}">
+        R$ {{ summary.period_result|floatformat:2 }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Contas a receber (aberto)</div>
+      <div class="value">R$ {{ summary.receivables_open|floatformat:2 }}</div>
+      <div class="hint">vencidas: R$ {{ summary.receivables_overdue|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Contas a pagar (aberto)</div>
+      <div class="value">R$ {{ summary.payables_open|floatformat:2 }}</div>
+      <div class="hint">vencidas: R$ {{ summary.payables_overdue|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 d-flex align-items-stretch gap-2">
+    <a class="btn btn-outline-secondary flex-fill" href="{% url 'finance:receivable-list' %}">
+      <i class="bi bi-arrow-down-circle"></i><br class="d-lg-none"> Contas a receber
+    </a>
+    <a class="btn btn-outline-secondary flex-fill" href="{% url 'finance:payable-list' %}">
+      <i class="bi bi-arrow-up-circle"></i><br class="d-lg-none"> Contas a pagar
+    </a>
+    <a class="btn btn-outline-secondary flex-fill" href="{% url 'finance:cashflow' %}">
+      <i class="bi bi-graph-up"></i><br class="d-lg-none"> Fluxo de caixa
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Receitas x despesas no periodo</div>
+  <div class="card-body"><canvas id="chartFinance" height="110"></canvas></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ summary.chart_labels|json_script:"financeLabels" }}
+{{ summary.chart_income|json_script:"financeIncome" }}
+{{ summary.chart_expense|json_script:"financeExpense" }}
+<script>
+(function () {
+  const read = (id) => JSON.parse(document.getElementById(id).textContent);
+  new Chart(document.getElementById("chartFinance"), {
+    type: "bar",
+    data: {
+      labels: read("financeLabels"),
+      datasets: [
+        { label: "Entradas", data: read("financeIncome"), backgroundColor: "#198754" },
+        { label: "Saidas", data: read("financeExpense"), backgroundColor: "#dc3545" }
+      ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  });
+})();
+</script>
+{% endblock %}

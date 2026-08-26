@@ -1,0 +1,41 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Papeis personalizados{% endblock %}
+{% block page_subtitle %}Ajuste as permissoes de cada perfil sem alterar o sistema.{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-primary" href="{% url 'accounts:role-create' %}"><i class="bi bi-plus-lg"></i> Novo papel</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Nome</th><th>Perfil base</th><th>Permissoes</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for role in roles %}
+          <tr>
+            <td>
+              {{ role.name }}
+              <div class="small text-body-secondary">{{ role.description|truncatechars:70 }}</div>
+            </td>
+            <td>{{ role.get_base_role_display }}</td>
+            <td>{{ role.permissions|length }} selecionada(s)</td>
+            <td>
+              {% if role.is_active %}<span class="badge text-bg-success">Ativo</span>
+              {% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:role-update' role.pk %}">Editar</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-body-secondary">
+            Nenhum papel personalizado. Os perfis padrao continuam valendo.
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

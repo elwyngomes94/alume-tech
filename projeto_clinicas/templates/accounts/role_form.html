@@ -1,0 +1,39 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{% if form.instance.is_saved %}Editar papel{% else %}Novo papel{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3"><label class="form-label">Nome</label>{{ form.name }}</div>
+          <div class="mb-3"><label class="form-label">Perfil base</label>{{ form.base_role }}</div>
+          <div class="mb-3"><label class="form-label">Descricao</label>{{ form.description }}</div>
+          <div class="form-check">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Ativo</label>
+          </div>
+          <p class="form-text mt-3">
+            Se nenhuma permissao for marcada, valem as permissoes padrao do perfil base.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">Permissoes</div>
+        <div class="card-body">
+          {{ form.permissions }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Salvar</button>
+    <a class="btn btn-light" href="{% url 'accounts:role-list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

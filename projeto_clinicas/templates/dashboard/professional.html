@@ -1,0 +1,128 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Meu painel{% endblock %}
+{% block page_subtitle %}{% if professional %}{{ professional.display_name }}{% endif %}{% endblock %}
+
+{% block content %}
+{% if not professional %}
+  <div class="alert alert-warning">
+    Seu usuario nao esta vinculado a um cadastro de profissional nesta clinica.
+  </div>
+{% else %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Hoje</div>
+      <div class="value">{{ today_appointments|length }}</div>
+      <div class="hint">{{ waiting_now }} aguardando atendimento</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Concluidos no mes</div>
+      <div class="value">{{ completed_month }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Rascunhos pendentes</div>
+      <div class="value">{{ drafts|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Exames pendentes</div>
+      <div class="value">{{ pending_exams|length }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Agenda de hoje</span>
+        <a class="small" href="{% url 'scheduling:agenda-day' %}">Ver agenda completa</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Hora</th><th>Paciente</th><th>Servico</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for appointment in today_appointments %}
+              <tr>
+                <td>{{ appointment.start_at|time:"H:i" }}</td>
+                <td>{{ appointment.patient.display_name }}</td>
+                <td class="small">{{ appointment.service|default:"-" }}</td>
+                <td><span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span></td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'scheduling:appointment-detail' appointment.pk %}">Abrir</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-body-secondary">Sem atendimentos hoje.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Atendimentos nos ultimos 7 dias</div>
+      <div class="card-body"><canvas id="chartWeek" height="110"></canvas></div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">Rascunhos de prontuario</div>
+      <ul class="list-group list-group-flush">
+        {% for entry in drafts %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ entry.record.patient.display_name }}</span>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'medical_records:entry-update' entry.pk %}">Concluir</a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum rascunho pendente.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Exames aguardando resultado</div>
+      <ul class="list-group list-group-flush">
+        {% for request_obj in pending_exams %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ request_obj.patient.display_name }}</span>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'examinations:request-detail' request_obj.pk %}">Ver</a>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum exame pendente.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ week_chart_labels|json_script:"weekLabels" }}
+{{ week_chart_values|json_script:"weekValues" }}
+<script>
+(function () {
+  const el = document.getElementById("chartWeek");
+  if (!el) return;
+  const primary = getComputedStyle(document.documentElement).getPropertyValue("--jja-primary").trim();
+  new Chart(el, {
+    type: "bar",
+    data: {
+      labels: JSON.parse(document.getElementById("weekLabels").textContent),
+      datasets: [{ data: JSON.parse(document.getElementById("weekValues").textContent),
+                   backgroundColor: primary, borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } },
+               scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+})();
+</script>
+{% endblock %}

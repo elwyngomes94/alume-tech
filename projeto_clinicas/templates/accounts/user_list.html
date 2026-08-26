@@ -1,0 +1,105 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Usuarios da clinica{% endblock %}
+{% block page_subtitle %}Cada usuario so enxerga os dados desta clinica.{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.report_view %}
+    <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'usuarios' %}">
+      <i class="bi bi-bar-chart"></i> Relatorio
+    </a>
+  {% endif %}
+  {% if perms_clinic.role_manage %}
+    <a class="btn btn-outline-secondary" href="{% url 'accounts:role-list' %}">
+      <i class="bi bi-key"></i> Papeis e permissoes
+    </a>
+  {% endif %}
+  {% if perms_clinic.user_add %}
+    <a class="btn btn-primary" href="{% url 'accounts:user-create' %}">
+      <i class="bi bi-plus-lg"></i> Novo usuario
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-5">
+    <input class="form-control" type="search" name="q" placeholder="Buscar por nome"
+           value="{{ request.GET.q|default:'' }}">
+  </div>
+  <div class="col-md-4">
+    <select class="form-select" name="role">
+      <option value="">Todos os perfis</option>
+      {% for value, label in roles %}
+        <option value="{{ value }}" {% if request.GET.role == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-grid">
+    <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Papel</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for membership in memberships %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="jja-avatar">{{ membership.user.initials }}</span>
+                <div>
+                  <div>{{ membership.user.full_name }}</div>
+                  <small class="text-body-secondary">{{ membership.job_title }}</small>
+                </div>
+              </div>
+            </td>
+            <td class="small">{{ membership.user.email }}</td>
+            <td><span class="badge text-bg-light">{{ membership.get_role_display }}</span></td>
+            <td class="small">{{ membership.custom_role|default:"Padrao do perfil" }}</td>
+            <td>
+              {% if membership.is_active and membership.user.is_active %}
+                <span class="badge text-bg-success">Ativo</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Inativo</span>
+              {% endif %}
+              {% if membership.user.mfa_enabled %}
+                <span class="badge text-bg-info" title="MFA ativo">MFA</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                {% if perms_clinic.user_change %}
+                  <a class="btn btn-outline-secondary" href="{% url 'accounts:user-update' membership.pk %}">Editar</a>
+                {% endif %}
+                {% if perms_clinic.user_change and not membership.user.is_superadmin and membership.user_id != user.pk %}
+                  <a class="btn btn-outline-secondary" href="{% url 'accounts:user-password-reset' membership.pk %}">
+                    <i class="bi bi-key"></i> Senha
+                  </a>
+                {% endif %}
+                {% if perms_clinic.role_manage %}
+                  <a class="btn btn-outline-secondary" href="{% url 'accounts:membership-permissions' membership.pk %}">Permissoes</a>
+                {% endif %}
+                {% if perms_clinic.user_delete %}
+                  <form method="post" action="{% url 'accounts:user-remove' membership.pk %}"
+                        data-confirm="Remover o vinculo deste usuario com a clinica?">
+                    {% csrf_token %}
+                    <button class="btn btn-outline-danger" type="submit">Remover</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-body-secondary">Nenhum usuario encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

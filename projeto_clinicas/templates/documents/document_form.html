@@ -1,0 +1,20 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Enviar documento{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <div class="alert alert-info small mt-3">
+        <i class="bi bi-shield-lock"></i>
+        O arquivo sera armazenado em area privada, sem URL publica. O acesso e
+        controlado por permissao e registrado em auditoria.
+      </div>
+      <button class="btn btn-primary" type="submit">Enviar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jja_system
+      POSTGRES_USER: jja_user
+      POSTGRES_PASSWORD: jja_password
+    volumes:
+      - jja_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jja_user -d jja_system"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://jja_user:jja_password@db:5432/jja_system
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - jja_media:/app/media
+      - jja_private_media:/app/private_media
+      - jja_static:/app/staticfiles
+      - jja_backups:/app/backups
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    ports:
+      - "8000:8000"
+
+  celery:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://jja_user:jja_password@db:5432/jja_system
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - jja_media:/app/media
+      - jja_private_media:/app/private_media
+      - jja_backups:/app/backups
+    command: celery -A config worker -l info
+
+  celery-beat:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://jja_user:jja_password@db:5432/jja_system
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    command: celery -A config beat -l info
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - jja_static:/app/staticfiles:ro
+      - jja_media:/app/media:ro
+
+volumes:
+  jja_postgres_data:
+  jja_media:
+  jja_private_media:
+  jja_static:
+  jja_backups:

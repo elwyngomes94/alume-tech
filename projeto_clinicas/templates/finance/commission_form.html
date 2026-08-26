@@ -1,0 +1,22 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{% if form.instance.is_saved %}Editar regra de comissao{% else %}Nova regra de comissao{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <p class="form-text mt-2">
+        Informe percentual OU valor fixo, nao os dois. Deixe profissional/servico vazio para
+        criar uma regra generica.
+      </p>
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Salvar</button>
+        <a class="btn btn-light" href="{% url 'finance:commission-list' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

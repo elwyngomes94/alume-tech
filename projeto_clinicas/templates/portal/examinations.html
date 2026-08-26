@@ -1,0 +1,29 @@
+{% extends "layouts/portal.html" %}
+
+{% block page_title %}Meus exames{% endblock %}
+
+{% block content %}
+<div class="card">
+  <ul class="list-group list-group-flush">
+    {% for item in requests %}
+      <li class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <strong>Solicitacao #{{ item.number }}</strong>
+          <span class="badge text-bg-light border">{{ item.get_status_display }}</span>
+        </div>
+        <div class="small text-body-secondary">{{ item.requested_at|date:"d/m/Y" }}</div>
+        {% for result in item.results.all %}
+          {% if result.document %}
+            <a class="btn btn-sm btn-outline-primary mt-2" href="{% url 'portal:document-download' result.document.pk %}">
+              Baixar resultado
+            </a>
+          {% endif %}
+        {% endfor %}
+      </li>
+    {% empty %}
+      <li class="list-group-item text-body-secondary">Nenhum exame disponivel.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

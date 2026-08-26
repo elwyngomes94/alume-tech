@@ -1,0 +1,24 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Solicitacao de exames{% endblock %}
+{% block page_actions %}<button class="btn btn-outline-secondary no-print" onclick="window.print()">Imprimir</button>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between mb-4">
+      <h4>{{ request_obj.clinic }}</h4>
+      <span>{{ request_obj.requested_at|date:"d/m/Y" }}</span>
+    </div>
+    <p><strong>Paciente:</strong> {{ request_obj.patient.display_name }} ({{ request_obj.patient.formatted_cpf }})</p>
+    <p><strong>Indicacao clinica:</strong> {{ request_obj.clinical_indication }}</p>
+    <h6 class="mt-4">Exames solicitados</h6>
+    <ul>{% for item in request_obj.items.all %}<li>{{ item.name }}</li>{% endfor %}</ul>
+    <div class="mt-5 pt-5 text-center">
+      <div style="border-top: 1px solid #333; width: 320px; margin: 0 auto;"></div>
+      <p class="small mb-0">{{ request_obj.professional.display_name }}</p>
+      <p class="small text-body-secondary">{{ request_obj.professional.registry_label }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

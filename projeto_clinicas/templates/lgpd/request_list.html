@@ -1,0 +1,42 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Solicitacoes de titulares (LGPD art. 18){% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Titular</th><th>Tipo</th><th>Prazo</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for item in requests %}
+              <tr class="{% if item.is_overdue %}table-danger{% endif %}">
+                <td><a href="{% url 'lgpd:request-detail' item.pk %}">{{ item.requester_name }}</a></td>
+                <td class="small">{{ item.get_kind_display }}</td>
+                <td class="small">{{ item.due_date|date:"d/m/Y" }}</td>
+                <td><span class="badge text-bg-light border">{{ item.get_status_display }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">Nenhuma solicitacao.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% include "includes/pagination.html" %}
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Registrar solicitacao</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'lgpd:request-create' %}" novalidate>
+          {% csrf_token %}
+          {% include "includes/form.html" with form=form %}
+          <button class="btn btn-primary w-100 mt-3" type="submit">Registrar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

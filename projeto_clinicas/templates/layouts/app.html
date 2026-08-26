@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% comment %}
+Layout do painel operacional da clinica (/app/).
+Sidebar + topbar + area de conteudo, totalmente responsivo.
+{% endcomment %}
+
+{% block body %}
+<div class="jja-shell">
+  {% include "includes/sidebar.html" %}
+
+  <div class="jja-main">
+    {% include "includes/topbar.html" %}
+
+    <main class="jja-content">
+      {% block breadcrumbs %}{% endblock %}
+      {% include "includes/messages.html" %}
+
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <h1 class="h4 mb-0">{% block page_title %}{% endblock %}</h1>
+          <p class="text-body-secondary small mb-0">{% block page_subtitle %}{% endblock %}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">{% block page_actions %}{% endblock %}</div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="jja-footer">
+      <span>{{ PLATFORM_NAME }} &copy; {% now "Y" %}</span>
+      {% if active_clinic %}<span class="text-body-secondary">{{ active_clinic }}</span>{% endif %}
+    </footer>
+  </div>
+</div>
+{% endblock %}

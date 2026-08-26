@@ -1,0 +1,64 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Disponibilidade e bloqueios{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'scheduling:block-create' %}"><i class="bi bi-slash-circle"></i> Novo bloqueio</a>
+  <a class="btn btn-primary" href="{% url 'scheduling:schedule-create' %}"><i class="bi bi-plus-lg"></i> Nova disponibilidade</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">Grade semanal por profissional</div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Profissional</th><th>Dia</th><th>Horario</th><th>Sala</th><th></th></tr></thead>
+          <tbody>
+            {% for template in templates %}
+              <tr>
+                <td>{{ template.professional.display_name }}</td>
+                <td>{{ template.get_weekday_display }}</td>
+                <td>{{ template.start_time|time:"H:i" }} - {{ template.end_time|time:"H:i" }}</td>
+                <td class="small">{{ template.room|default:"-" }}</td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <a class="btn btn-outline-secondary" href="{% url 'scheduling:schedule-update' template.pk %}">Editar</a>
+                    <form method="post" action="{% url 'scheduling:schedule-delete' template.pk %}" data-confirm="Remover esta disponibilidade?">
+                      {% csrf_token %}<button class="btn btn-outline-danger" type="submit">Excluir</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-body-secondary">Nenhuma disponibilidade cadastrada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Proximos bloqueios</div>
+      <ul class="list-group list-group-flush small">
+        {% for block in blocks %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ block.get_kind_display }}</strong><br>
+              {{ block.professional|default:"Toda a clinica" }}<br>
+              {{ block.start_at|date:"d/m H:i" }} - {{ block.end_at|date:"d/m H:i" }}
+            </div>
+            <form method="post" action="{% url 'scheduling:block-delete' block.pk %}" data-confirm="Remover este bloqueio?">
+              {% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum bloqueio futuro.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

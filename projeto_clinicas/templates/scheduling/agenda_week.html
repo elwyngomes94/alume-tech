@@ -1,0 +1,47 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Agenda semanal{% endblock %}
+{% block page_subtitle %}{{ week_start|date:"d/m" }} a {{ week_end|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+{% include "scheduling/_agenda_filters.html" %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-sm btn-outline-secondary" href="?date={{ previous_week|date:'Y-m-d' }}&professional={{ request.GET.professional }}">
+    <i class="bi bi-chevron-left"></i> Semana anterior
+  </a>
+  <a class="btn btn-sm btn-outline-secondary" href="?date={{ next_week|date:'Y-m-d' }}&professional={{ request.GET.professional }}">
+    Proxima semana <i class="bi bi-chevron-right"></i>
+  </a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-bordered bg-white">
+    <thead>
+      <tr>
+        {% for day in week_days %}
+          <th class="text-center small">{{ day.date|date:"D, d/m" }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        {% for day in week_days %}
+          <td class="jja-week-cell">
+            {% for appointment in day.appointments %}
+              <a href="{% url 'scheduling:appointment-detail' appointment.pk %}"
+                 class="jja-chip text-bg-{{ appointment.status_color }}"
+                 title="Pagamento: {{ appointment.payment_badge.label|default:'-' }}">
+                {{ appointment.start_at|time:"H:i" }} {{ appointment.patient.display_name }}
+                {% if appointment.payment_badge %}{{ appointment.payment_badge.emoji }}{% endif %}
+              </a>
+            {% empty %}
+              <span class="text-body-secondary small">-</span>
+            {% endfor %}
+          </td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

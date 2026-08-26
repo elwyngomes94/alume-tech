@@ -1,0 +1,58 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Automacoes{% endblock %}
+{% block page_subtitle %}Configuracoes das automacoes operacionais desta clinica.{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.automation_view %}
+    <a class="btn btn-outline-secondary" href="{% url 'automation:execution-list' %}">
+      <i class="bi bi-clock-history"></i> Historico de automacoes
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">Automacao operacional</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% include "includes/form.html" with form=form %}
+          <button class="btn btn-primary mt-3" type="submit">Salvar configuracoes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">Webhook financeiro (baixa automatica)</div>
+      <div class="card-body small">
+        <p class="text-body-secondary">
+          Endpoint para uma integracao de pagamentos confirmar uma baixa automaticamente.
+          So funciona com "aceitar baixa automatica via webhook" ativo ao lado.
+        </p>
+        <dl class="row mb-3">
+          <dt class="col-4">URL</dt>
+          <dd class="col-8"><code class="small">{{ request.scheme }}://{{ request.get_host }}{% url 'automation:financial-webhook' active_clinic.pk %}</code></dd>
+          <dt class="col-4">Segredo</dt>
+          <dd class="col-8"><code class="small">{{ object.financial_webhook_secret }}</code></dd>
+        </dl>
+        <p class="text-body-secondary">
+          Assine o corpo da requisicao com HMAC-SHA256 usando o segredo acima e envie no
+          header <code>X-JJA-Signature</code>.
+        </p>
+        {% if perms_clinic.automation_manage %}
+          <form method="post" action="{% url 'automation:webhook-secret-regenerate' %}"
+                data-confirm="Gerar um novo segredo invalida o segredo atual. Continuar?">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit">Gerar novo segredo</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

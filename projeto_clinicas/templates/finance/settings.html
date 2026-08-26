@@ -1,0 +1,82 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Configuracoes financeiras{% endblock %}
+{% block page_subtitle %}Categorias, centros de custo e formas de pagamento da clinica.{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Categorias de receita</span>
+        <a class="small" href="{% url 'finance:category-create' %}?kind=income">Adicionar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for c in income_categories %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ c.name }} {% if not c.is_active %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</span>
+            <a class="small" href="{% url 'finance:category-update' c.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma categoria.</li>{% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Categorias de despesa</span>
+        <a class="small" href="{% url 'finance:category-create' %}?kind=expense">Adicionar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for c in expense_categories %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ c.name }} {% if not c.is_active %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</span>
+            <a class="small" href="{% url 'finance:category-update' c.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma categoria.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Centros de custo</span>
+        <a class="small" href="{% url 'finance:costcenter-create' %}">Adicionar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for cc in cost_centers %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ cc.name }}</span>
+            <a class="small" href="{% url 'finance:costcenter-update' cc.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum centro de custo.</li>{% endfor %}
+      </ul>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Formas de pagamento</span>
+        <a class="small" href="{% url 'finance:paymentmethod-create' %}">Adicionar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for m in payment_methods %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ m.name }}</span>
+            <a class="small" href="{% url 'finance:paymentmethod-update' m.pk %}">Editar</a>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma forma de pagamento.</li>{% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Comissoes de profissionais</span>
+        <a class="small" href="{% url 'finance:commission-list' %}">Gerenciar</a>
+      </div>
+      <div class="card-body small text-body-secondary">
+        Configure percentuais ou valores fixos de comissao por profissional e/ou servico.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

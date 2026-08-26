@@ -1,0 +1,15 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_title %}Cadastro nao encontrado{% endblock %}
+
+{% block content %}
+<p>
+  Seu usuario ainda nao esta vinculado a um cadastro de paciente em nenhuma
+  clinica. Entre em contato com a clinica onde voce e atendido para vincular
+  seu acesso.
+</p>
+<form method="post" action="{% url 'accounts:logout' %}">
+  {% csrf_token %}
+  <button class="btn btn-outline-secondary w-100" type="submit">Sair</button>
+</form>
+{% endblock %}

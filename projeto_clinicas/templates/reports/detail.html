@@ -1,0 +1,31 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ report_label }}{% endblock %}
+{% block page_subtitle %}{{ start|date:"d/m/Y" }} a {{ end|date:"d/m/Y" }} &middot; {{ total_rows }} registro(s){% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary btn-sm no-print"
+     href="{% url 'reports:export' report_key 'csv' %}?period={{ period }}&start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}">
+    CSV
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  {% include "includes/report_actions.html" with pdf_url=pdf_url excel_url=excel_url whatsapp_text=whatsapp_text %}
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr>{% for header in headers %}<th>{{ header }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+        {% empty %}
+          <tr><td colspan="{{ headers|length }}" class="text-body-secondary">Nenhum dado no periodo selecionado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

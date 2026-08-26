@@ -1,0 +1,83 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Pagamentos pendentes{% endblock %}
+{% block page_subtitle %}Fila de "dar baixa" -- agendamentos com valor em aberto{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-4"><input class="form-control" type="search" name="q" placeholder="Paciente" value="{{ request.GET.q|default:'' }}"></div>
+  <div class="col-md-3"><input class="form-control" type="date" name="start" value="{{ request.GET.start|default:'' }}"></div>
+  <div class="col-md-3"><input class="form-control" type="date" name="end" value="{{ request.GET.end|default:'' }}"></div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Paciente</th><th>Data</th><th>Profissional</th><th>Procedimento</th>
+          <th>Valor</th><th>Recebido</th><th>Saldo</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in receivables %}
+          <tr>
+            <td>
+              {% if item.appointment_id %}
+                <a href="{% url 'scheduling:appointment-detail' item.appointment_id %}">{{ item.patient.display_name|default:item.description }}</a>
+              {% else %}
+                {{ item.patient.display_name|default:item.description }}
+              {% endif %}
+            </td>
+            <td class="small">{{ item.service_date|date:"d/m/Y" }}</td>
+            <td class="small">{{ item.professional|default:"-" }}</td>
+            <td class="small">{{ item.service|default:"-" }}</td>
+            <td>R$ {{ item.net_amount|floatformat:2 }}</td>
+            <td>R$ {{ item.paid_amount|floatformat:2 }}</td>
+            <td><strong>R$ {{ item.balance|floatformat:2 }}</strong></td>
+            <td>
+              <span class="badge text-bg-{% if item.status == 'overdue' %}danger{% elif item.status == 'partial' %}warning{% else %}light border{% endif %}">
+                {{ item.get_status_display }}
+              </span>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-success" type="button" data-bs-toggle="modal" data-bs-target="#payModal{{ item.pk|slugify }}">
+                Dar baixa
+              </button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9" class="text-body-secondary">Nenhum pagamento pendente encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+
+{% for item in receivables %}
+  <div class="modal fade" id="payModal{{ item.pk|slugify }}" tabindex="-1">
+    <div class="modal-dialog">
+      <form method="post" action="{% url 'finance:appointment-receivable-pay' item.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Dar baixa -- {{ item.patient.display_name|default:item.description }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-body-secondary">Saldo em aberto: <strong>R$ {{ item.balance|floatformat:2 }}</strong></p>
+            {% include "includes/form.html" with form=pay_form %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Voltar</button>
+            <button type="submit" class="btn btn-success">Registrar pagamento</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endfor %}
+{% endblock %}

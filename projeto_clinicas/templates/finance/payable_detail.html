@@ -1,0 +1,81 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ payable.supplier_name }}{% endblock %}
+{% block page_subtitle %}Vencimento: {{ payable.due_date|date:"d/m/Y" }} &middot; {{ payable.get_status_display }}{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.finance_change and payable.status != 'canceled' %}
+    <a class="btn btn-outline-secondary" href="{% url 'finance:payable-update' payable.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">Detalhes</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-4">Categoria</dt><dd class="col-8">{{ payable.category }}</dd>
+          <dt class="col-4">Centro de custo</dt><dd class="col-8">{{ payable.cost_center|default:"-" }}</dd>
+          <dt class="col-4">Descricao</dt><dd class="col-8">{{ payable.description }}</dd>
+          <dt class="col-4">Data de lancamento</dt><dd class="col-8">{{ payable.issue_date|date:"d/m/Y" }}</dd>
+          <dt class="col-4">Valor</dt><dd class="col-8"><strong>R$ {{ payable.amount|floatformat:2 }}</strong></dd>
+          <dt class="col-4">Pago</dt><dd class="col-8">R$ {{ payable.paid_amount|floatformat:2 }}</dd>
+          <dt class="col-4">Saldo</dt><dd class="col-8">R$ {{ payable.balance|floatformat:2 }}</dd>
+          <dt class="col-4">Comprovante</dt>
+          <dd class="col-8">
+            {% if payable.attachment %}
+              <a href="{% url 'documents:download' payable.attachment.pk %}">Baixar comprovante</a>
+            {% else %}-{% endif %}
+          </dd>
+          <dt class="col-4">Observacoes</dt><dd class="col-8">{{ payable.notes|default:"-"|linebreaksbr }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Pagamentos registrados</div>
+      <ul class="list-group list-group-flush small">
+        {% for payment in payments %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ payment.paid_at|date:"d/m/Y H:i" }} - {{ payment.method }}</span>
+            <strong>R$ {{ payment.amount|floatformat:2 }}</strong>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum pagamento registrado.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if perms_clinic.finance_add and payable.balance > 0 and payable.status != 'canceled' %}
+      <div class="card mb-3">
+        <div class="card-header">Registrar pagamento</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'finance:payable-pay' payable.pk %}" novalidate>
+            {% csrf_token %}
+            {% include "includes/form.html" with form=pay_form %}
+            <button class="btn btn-success w-100 mt-3" type="submit">Registrar pagamento</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if perms_clinic.finance_cancel and payable.status != 'canceled' and payable.status != 'paid' %}
+      <div class="card">
+        <div class="card-header text-danger">Cancelar</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'finance:payable-cancel' payable.pk %}"
+                data-confirm="Cancelar esta conta a pagar?">
+            {% csrf_token %}
+            {% include "includes/form.html" with form=cancel_form %}
+            <button class="btn btn-outline-danger w-100 mt-3" type="submit">Cancelar conta</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

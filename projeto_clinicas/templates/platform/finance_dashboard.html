@@ -1,0 +1,88 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}Financeiro do sistema{% endblock %}
+{% block page_subtitle %}Contabilidade da propria plataforma Alume Tech.{% endblock %}
+
+{% block page_actions %}
+<form method="get" class="d-flex gap-2">
+  <select class="form-select form-select-sm" name="period" onchange="this.form.submit()">
+    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+    <option value="90d" {% if period == '90d' %}selected{% endif %}>90 dias</option>
+    <option value="12m" {% if period == '12m' %}selected{% endif %}>12 meses</option>
+  </select>
+</form>
+<a class="btn btn-outline-secondary btn-sm" href="{% url 'platform:system-expense-list' %}">Despesas do sistema</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Receita do periodo</div><div class="value">R$ {{ metrics.period_revenue|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">MRR</div><div class="value">R$ {{ metrics.mrr|floatformat:2 }}</div><div class="hint">ARR: R$ {{ metrics.arr|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Despesas do periodo</div><div class="value">R$ {{ metrics.expense_total|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Lucro</div><div class="value {% if metrics.profit < 0 %}text-danger{% else %}text-success{% endif %}">R$ {{ metrics.profit|floatformat:2 }}</div><div class="hint">margem: {{ metrics.margin_percent }}%</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Assinaturas ativas</div><div class="value">{{ metrics.subscriptions_active }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Em avaliacao</div><div class="value">{{ metrics.subscriptions_trial }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Em atraso</div><div class="value text-warning">{{ metrics.subscriptions_past_due }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Canceladas</div><div class="value text-danger">{{ metrics.subscriptions_canceled }}</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-4"><div class="jja-stat"><div class="label">Faturas vencidas</div><div class="value">{{ metrics.overdue_invoices_count }}</div><div class="hint">R$ {{ metrics.overdue_amount|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-4"><div class="jja-stat"><div class="label">Clinicas na plataforma</div><div class="value">{{ metrics.clinics_total }}</div></div></div>
+  <div class="col-6 col-lg-4"><div class="jja-stat"><div class="label">Ticket medio</div><div class="value">R$ {{ metrics.average_ticket|floatformat:2 }}</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card"><div class="card-header">Receita ao longo do tempo</div>
+      <div class="card-body"><canvas id="chartGrowth" height="200"></canvas></div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card"><div class="card-header">Receita por plano</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Plano</th><th>Receita</th></tr></thead>
+          <tbody>
+            {% for item in metrics.revenue_by_plan %}
+              <tr><td>{{ item.invoice__subscription__plan__name|default:"-" }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
+            {% empty %}<tr><td colspan="2" class="text-body-secondary">Sem dados.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Receita por clinica (top 10)</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Clinica</th><th>Receita</th></tr></thead>
+      <tbody>
+        {% for item in metrics.revenue_by_clinic %}
+          <tr><td>{{ item.invoice__subscription__clinic__trade_name|default:"-" }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
+        {% empty %}<tr><td colspan="2" class="text-body-secondary">Sem dados.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ metrics.chart_growth_labels|json_script:"growthLabels" }}
+{{ metrics.chart_growth_values|json_script:"growthValues" }}
+<script>
+(function () {
+  const read = (id) => JSON.parse(document.getElementById(id).textContent);
+  new Chart(document.getElementById("chartGrowth"), {
+    type: "line",
+    data: { labels: read("growthLabels"), datasets: [{ data: read("growthValues"), borderColor: "#0b5ed7", tension: .3, fill: false }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+})();
+</script>
+{% endblock %}

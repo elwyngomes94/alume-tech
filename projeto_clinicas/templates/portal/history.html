@@ -1,0 +1,20 @@
+{% extends "layouts/portal.html" %}
+
+{% block page_title %}Meu historico{% endblock %}
+{% block page_subtitle %}Atendimentos concluidos.{% endblock %}
+
+{% block content %}
+<div class="card">
+  <ul class="list-group list-group-flush">
+    {% for appointment in appointments %}
+      <li class="list-group-item">
+        <strong>{{ appointment.start_at|date:"d/m/Y" }}</strong> -
+        {{ appointment.professional.display_name }}
+        <span class="small text-body-secondary d-block">{{ appointment.service|default:"" }}</span>
+      </li>
+    {% empty %}
+      <li class="list-group-item text-body-secondary">Nenhum atendimento concluido ainda.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

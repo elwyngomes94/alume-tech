@@ -1,0 +1,127 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ entry.title|default:entry.template.name|default:"Atendimento" }}{% endblock %}
+{% block page_subtitle %}{{ patient.display_name }} &middot; {{ entry.attended_at|date:"d/m/Y H:i" }}{% endblock %}
+
+{% block page_actions %}
+  {% if can_edit %}
+    <a class="btn btn-outline-secondary" href="{% url 'medical_records:entry-update' entry.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+  {% if entry.is_draft and perms_clinic.medicalrecord_sign %}
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#signModal">Assinar</button>
+  {% endif %}
+  {% if not entry.is_draft and perms_clinic.prescription_add %}
+    <a class="btn btn-outline-primary" href="{% url 'medical_records:prescription-create' entry.pk %}">
+      <i class="bi bi-file-earmark-medical"></i> Nova prescricao
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    {% if vital_signs %}
+      <div class="card mb-3">
+        <div class="card-header">Sinais vitais</div>
+        <div class="card-body small">
+          <dl class="row mb-0">
+            {% if vital_signs.systolic_pressure and vital_signs.diastolic_pressure %}
+              <dt class="col-4">Pressao arterial</dt>
+              <dd class="col-8">{{ vital_signs.systolic_pressure }}/{{ vital_signs.diastolic_pressure }} mmHg</dd>
+            {% endif %}
+            {% if vital_signs.heart_rate %}<dt class="col-4">Freq. cardiaca</dt><dd class="col-8">{{ vital_signs.heart_rate }} bpm</dd>{% endif %}
+            {% if vital_signs.respiratory_rate %}<dt class="col-4">Freq. respiratoria</dt><dd class="col-8">{{ vital_signs.respiratory_rate }} irpm</dd>{% endif %}
+            {% if vital_signs.temperature %}<dt class="col-4">Temperatura</dt><dd class="col-8">{{ vital_signs.temperature }} C</dd>{% endif %}
+            {% if vital_signs.oxygen_saturation %}<dt class="col-4">Saturacao O2</dt><dd class="col-8">{{ vital_signs.oxygen_saturation }}%</dd>{% endif %}
+            {% if vital_signs.weight_kg %}<dt class="col-4">Peso</dt><dd class="col-8">{{ vital_signs.weight_kg }} kg</dd>{% endif %}
+            {% if vital_signs.height_cm %}<dt class="col-4">Altura</dt><dd class="col-8">{{ vital_signs.height_cm }} cm</dd>{% endif %}
+            {% if vital_signs.bmi %}<dt class="col-4">IMC</dt><dd class="col-8">{{ vital_signs.bmi }} ({{ vital_signs.bmi_classification }})</dd>{% endif %}
+            {% if vital_signs.glucose %}<dt class="col-4">Glicemia</dt><dd class="col-8">{{ vital_signs.glucose }} mg/dL</dd>{% endif %}
+            {% if vital_signs.notes %}<dt class="col-4">Observacoes</dt><dd class="col-8">{{ vital_signs.notes }}</dd>{% endif %}
+          </dl>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Conteudo</span>
+        {% if entry.is_draft %}<span class="badge text-bg-warning">Rascunho</span>
+        {% else %}<span class="badge text-bg-success">Assinado em {{ entry.signed_at|date:"d/m/Y H:i" }}</span>{% endif %}
+      </div>
+      <div class="card-body">
+        {% regroup values by section as grouped %}
+        {% for group in grouped %}
+          <h6 class="mt-2">{{ group.grouper }}</h6>
+          <dl class="row">
+            {% for item in group.list %}
+              <dt class="col-4">{{ item.label }}</dt><dd class="col-8">{{ item.value }}</dd>
+            {% endfor %}
+          </dl>
+        {% empty %}
+          <p class="text-body-secondary">Nenhum dado preenchido.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if entry.prescriptions.all %}
+      <div class="card">
+        <div class="card-header">Prescricoes deste atendimento</div>
+        <ul class="list-group list-group-flush">
+          {% for prescription in entry.prescriptions.all %}
+            <li class="list-group-item d-flex justify-content-between">
+              <a href="{% url 'medical_records:prescription-detail' prescription.pk %}">{{ prescription.get_kind_display }}</a>
+              <span class="text-body-secondary small">{{ prescription.issued_at|date:"d/m/Y" }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Registro</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5">Profissional</dt><dd class="col-7">{{ entry.professional.display_name }}</dd>
+          <dt class="col-5">Modelo</dt><dd class="col-7">{{ entry.template|default:"-" }}</dd>
+          <dt class="col-5">Versao</dt><dd class="col-7">{{ entry.version }}</dd>
+        </dl>
+      </div>
+    </div>
+    {% if entry.revisions.all %}
+      <div class="card">
+        <div class="card-header">Historico de alteracoes</div>
+        <ul class="list-group list-group-flush small">
+          {% for revision in entry.revisions.all %}
+            <li class="list-group-item">
+              v{{ revision.version }} - {{ revision.changed_by }} em {{ revision.created_at|date:"d/m/Y H:i" }}
+              {% if revision.reason %}<div class="text-body-secondary">{{ revision.reason }}</div>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="signModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'medical_records:entry-sign' entry.pk %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Assinar registro</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          {% include "includes/form.html" with form=sign_form %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar assinatura</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

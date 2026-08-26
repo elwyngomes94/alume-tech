@@ -1,0 +1,147 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{% if form.instance.is_saved %}Editar agendamento{% else %}Novo agendamento{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="row g-3">
+            {% for field in form %}
+              {% if field.name not in "gross_amount discount addition payment_method pay_now amount_paid_now is_courtesy" %}
+                {% if field.is_hidden %}
+                  {{ field }}
+                {% else %}
+                  <div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-md-6{% endif %}">
+                    {% if field.field.widget.input_type == 'checkbox' %}
+                      <div class="form-check">
+                        {{ field }}
+                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                      </div>
+                    {% else %}
+                      <label class="form-label" for="{{ field.id_for_label }}">
+                        {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                      </label>
+                      {{ field }}
+                    {% endif %}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          {% if "gross_amount" in form.fields %}
+            <hr class="my-4">
+            <h2 class="h6 mb-3">Informacoes financeiras</h2>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.gross_amount.id_for_label }}">{{ form.gross_amount.label }}</label>
+                {{ form.gross_amount }}
+                <div class="form-text">{{ form.gross_amount.help_text }}</div>
+                {% for error in form.gross_amount.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
+                {{ form.discount }}
+                {% for error in form.discount.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.addition.id_for_label }}">{{ form.addition.label }}</label>
+                {{ form.addition }}
+                {% for error in form.addition.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form.is_courtesy }}
+                  <label class="form-check-label" for="{{ form.is_courtesy.id_for_label }}">{{ form.is_courtesy.label }}</label>
+                </div>
+              </div>
+
+              <div class="col-12" id="jjaPayNowWrap">
+                <label class="form-label d-block">{{ form.pay_now.label }}</label>
+                {% for radio in form.pay_now %}
+                  <div class="form-check form-check-inline">
+                    {{ radio.tag }}
+                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6" id="jjaPaymentMethodWrap">
+                <label class="form-label" for="{{ form.payment_method.id_for_label }}">{{ form.payment_method.label }}</label>
+                {{ form.payment_method }}
+                {% for error in form.payment_method.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6" id="jjaAmountPaidWrap">
+                <label class="form-label" for="{{ form.amount_paid_now.id_for_label }}">{{ form.amount_paid_now.label }}</label>
+                {{ form.amount_paid_now }}
+                <div class="form-text">{{ form.amount_paid_now.help_text }}</div>
+                {% for error in form.amount_paid_now.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="mt-4 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">Salvar</button>
+            <a class="btn btn-light" href="{% url 'scheduling:agenda-day' %}">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Horarios livres</div>
+      <div class="card-body" id="jjaSlots" data-url="{% url 'scheduling:slots' %}"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const methodWrap = document.getElementById("jjaPaymentMethodWrap");
+  const amountWrap = document.getElementById("jjaAmountPaidWrap");
+  const payNowWrap = document.getElementById("jjaPayNowWrap");
+  if (!methodWrap || !amountWrap || !payNowWrap) { return; }
+
+  const payNowRadios = document.querySelectorAll('input[name="pay_now"]');
+  const courtesyCheckbox = document.getElementById("{{ form.is_courtesy.id_for_label }}");
+
+  function togglePaymentFields() {
+    const selected = document.querySelector('input[name="pay_now"]:checked');
+    const isYes = selected && selected.value === "yes";
+    methodWrap.style.display = isYes ? "block" : "none";
+    amountWrap.style.display = isYes ? "block" : "none";
+  }
+
+  function toggleCourtesy() {
+    const isCourtesy = courtesyCheckbox && courtesyCheckbox.checked;
+    payNowWrap.style.display = isCourtesy ? "none" : "block";
+    if (isCourtesy) {
+      methodWrap.style.display = "none";
+      amountWrap.style.display = "none";
+    } else {
+      togglePaymentFields();
+    }
+  }
+
+  payNowRadios.forEach(function (radio) { radio.addEventListener("change", togglePaymentFields); });
+  if (courtesyCheckbox) { courtesyCheckbox.addEventListener("change", toggleCourtesy); }
+  toggleCourtesy();
+})();
+</script>
+{% endblock %}

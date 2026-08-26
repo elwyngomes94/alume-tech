@@ -1,0 +1,79 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}{{ clinic }}{% endblock %}
+{% block page_subtitle %}{{ clinic.get_clinic_type_display }} &middot; {{ clinic.city }}/{{ clinic.state }}{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'platform:clinic-update' clinic.pk %}">Editar</a>
+  <form method="post" action="{% url 'platform:clinic-impersonate' clinic.pk %}" class="d-inline"
+        data-confirm="Voce vai acessar o painel operacional desta clinica. O acesso sera registrado em auditoria. Continuar?">
+    {% csrf_token %}
+    <button class="btn btn-outline-primary" type="submit">Acessar painel (suporte)</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Status</div>
+      <div class="card-body">
+        <span class="badge text-bg-{% if clinic.status == 'active' %}success{% elif clinic.status == 'trial' %}info{% elif clinic.status == 'suspended' %}warning{% else %}danger{% endif %} mb-3">
+          {{ clinic.get_status_display }}
+        </span>
+        <div class="d-grid gap-2">
+          <form method="post" action="{% url 'platform:clinic-status' clinic.pk 'active' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-success w-100">Ativar</button></form>
+          <form method="post" action="{% url 'platform:clinic-status' clinic.pk 'suspended' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-warning w-100">Suspender</button></form>
+          <form method="post" action="{% url 'platform:clinic-status' clinic.pk 'canceled' %}" data-confirm="Cancelar esta clinica?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger w-100">Cancelar</button></form>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">Numeros</div>
+      <ul class="list-group list-group-flush small">
+        <li class="list-group-item d-flex justify-content-between"><span>Pacientes</span><strong>{{ patients_count }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Profissionais</span><strong>{{ professionals_count }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Agendamentos</span><strong>{{ appointments_count }}</strong></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Modulos ativos</div>
+      <div class="card-body">
+        {% for module in modules %}<span class="badge text-bg-light border me-1 mb-1">{{ module }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header">Equipe</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Nome</th><th>Perfil</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for membership in memberships %}
+              <tr>
+                <td>{{ membership.user.full_name }} <span class="text-body-secondary small">({{ membership.user.email }})</span></td>
+                <td class="small">{{ membership.get_role_display }}</td>
+                <td>{% if membership.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+              </tr>
+            {% empty %}<tr><td colspan="3" class="text-body-secondary">Nenhum usuario vinculado.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Auditoria administrativa recente</div>
+      <ul class="list-group list-group-flush small">
+        {% for log in audit %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ log.user_email }} - {{ log.action_label }}</span>
+            <span class="text-body-secondary">{{ log.created_at|date:"d/m/Y H:i" }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Sem eventos.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

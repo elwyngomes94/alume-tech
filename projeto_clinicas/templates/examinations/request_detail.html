@@ -1,0 +1,75 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Solicitacao #{{ request_obj.number }}{% endblock %}
+{% block page_subtitle %}{{ request_obj.patient.display_name }}{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'examinations:request-print' request_obj.pk %}" target="_blank">
+    <i class="bi bi-printer"></i> Imprimir
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">Indicacao clinica</div>
+      <div class="card-body small">{{ request_obj.clinical_indication|linebreaksbr }}</div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">Exames solicitados</div>
+      <ul class="list-group list-group-flush">
+        {% for item in request_obj.items.all %}<li class="list-group-item">{{ item.name }}</li>{% endfor %}
+      </ul>
+    </div>
+
+    {% if request_obj.results.all %}
+      <div class="card">
+        <div class="card-header">Resultados</div>
+        <ul class="list-group list-group-flush">
+          {% for result in request_obj.results.all %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between">
+                <strong>{{ result.item|default:"Resultado geral" }}</strong>
+                <span class="text-body-secondary small">{{ result.result_date|date:"d/m/Y" }}</span>
+              </div>
+              {% if result.summary %}<p class="mb-1 small">{{ result.summary|linebreaksbr }}</p>{% endif %}
+              {% if result.document %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'documents:download' result.document.pk %}">Baixar arquivo</a>
+              {% endif %}
+              {% if result.is_abnormal %}<span class="badge text-bg-danger ms-2">Alterado</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">Dados</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5">Solicitante</dt><dd class="col-7">{{ request_obj.professional.display_name }}</dd>
+          <dt class="col-5">Data</dt><dd class="col-7">{{ request_obj.requested_at|date:"d/m/Y H:i" }}</dd>
+          <dt class="col-5">Prioridade</dt><dd class="col-7">{{ request_obj.get_priority_display }}</dd>
+          <dt class="col-5">Status</dt><dd class="col-7"><span class="badge text-bg-info">{{ request_obj.get_status_display }}</span></dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if can_add_result %}
+      <div class="card">
+        <div class="card-header">Registrar resultado</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'examinations:result-create' request_obj.pk %}" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% include "includes/form.html" with form=result_form %}
+            <button class="btn btn-primary w-100 mt-3" type="submit">Salvar resultado</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

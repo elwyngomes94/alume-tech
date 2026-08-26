@@ -1,0 +1,19 @@
+{% extends "layouts/portal.html" %}
+
+{% block page_title %}Minhas prescricoes{% endblock %}
+
+{% block content %}
+<div class="card">
+  <ul class="list-group list-group-flush">
+    {% for prescription in prescriptions %}
+      <li class="list-group-item d-flex justify-content-between">
+        <a href="{% url 'portal:prescription-detail' prescription.pk %}">{{ prescription.get_kind_display }}</a>
+        <span class="small text-body-secondary">{{ prescription.issued_at|date:"d/m/Y" }}</span>
+      </li>
+    {% empty %}
+      <li class="list-group-item text-body-secondary">Nenhuma prescricao disponivel.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

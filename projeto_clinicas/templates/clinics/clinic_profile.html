@@ -1,0 +1,33 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Dados da clinica{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% include "includes/form.html" with form=form %}
+          <button class="btn btn-primary mt-3" type="submit">Salvar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Modulos habilitados</div>
+      <ul class="list-group list-group-flush small">
+        {% for name, desc in modules %}
+          <li class="list-group-item"><strong>{{ name }}</strong><br>{{ desc }}</li>
+        {% endfor %}
+      </ul>
+      <div class="card-body small text-body-secondary">
+        Os modulos sao definidos pelo tipo de clinica no cadastro da
+        plataforma. Fale com o suporte para ajustar.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

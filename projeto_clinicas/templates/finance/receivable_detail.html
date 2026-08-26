@@ -1,0 +1,83 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ receivable.patient.display_name|default:receivable.description }}{% endblock %}
+{% block page_subtitle %}Vencimento: {{ receivable.due_date|date:"d/m/Y" }} &middot; {{ receivable.get_status_display }}{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.finance_change and receivable.status != 'canceled' %}
+    <a class="btn btn-outline-secondary" href="{% url 'finance:receivable-update' receivable.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">Detalhes</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-4">Paciente</dt><dd class="col-8">{{ receivable.patient|default:"-" }}</dd>
+          <dt class="col-4">Profissional</dt><dd class="col-8">{{ receivable.professional|default:"-" }}</dd>
+          <dt class="col-4">Servico</dt><dd class="col-8">{{ receivable.service|default:"-" }}</dd>
+          <dt class="col-4">Categoria</dt><dd class="col-8">{{ receivable.category }}</dd>
+          <dt class="col-4">Data do atendimento</dt><dd class="col-8">{{ receivable.service_date|date:"d/m/Y" }}</dd>
+          <dt class="col-4">Valor bruto</dt><dd class="col-8">R$ {{ receivable.gross_amount|floatformat:2 }}</dd>
+          <dt class="col-4">Desconto</dt><dd class="col-8">R$ {{ receivable.discount|floatformat:2 }}</dd>
+          <dt class="col-4">Acrescimo</dt><dd class="col-8">R$ {{ receivable.addition|floatformat:2 }}</dd>
+          <dt class="col-4">Valor liquido</dt><dd class="col-8"><strong>R$ {{ receivable.net_amount|floatformat:2 }}</strong></dd>
+          <dt class="col-4">Recebido</dt><dd class="col-8">R$ {{ receivable.paid_amount|floatformat:2 }}</dd>
+          <dt class="col-4">Saldo</dt><dd class="col-8">R$ {{ receivable.balance|floatformat:2 }}</dd>
+          {% if receivable.professional_commission_amount is not None %}
+            <dt class="col-4">Comissao do profissional</dt><dd class="col-8">R$ {{ receivable.professional_commission_amount|floatformat:2 }}</dd>
+            <dt class="col-4">Valor da clinica</dt><dd class="col-8">R$ {{ receivable.clinic_amount|floatformat:2 }}</dd>
+          {% endif %}
+          <dt class="col-4">Observacoes</dt><dd class="col-8">{{ receivable.notes|default:"-"|linebreaksbr }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Pagamentos registrados</div>
+      <ul class="list-group list-group-flush small">
+        {% for payment in payments %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ payment.paid_at|date:"d/m/Y H:i" }} - {{ payment.method }}</span>
+            <strong>R$ {{ payment.amount|floatformat:2 }}</strong>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum pagamento registrado.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if perms_clinic.finance_add and receivable.balance > 0 and receivable.status != 'canceled' %}
+      <div class="card mb-3">
+        <div class="card-header">Registrar pagamento</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'finance:receivable-pay' receivable.pk %}" novalidate>
+            {% csrf_token %}
+            {% include "includes/form.html" with form=pay_form %}
+            <button class="btn btn-success w-100 mt-3" type="submit">Registrar pagamento</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if perms_clinic.finance_cancel and receivable.status != 'canceled' and receivable.status != 'paid' %}
+      <div class="card">
+        <div class="card-header text-danger">Cancelar</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'finance:receivable-cancel' receivable.pk %}"
+                data-confirm="Cancelar esta conta a receber?">
+            {% csrf_token %}
+            {% include "includes/form.html" with form=cancel_form %}
+            <button class="btn btn-outline-danger w-100 mt-3" type="submit">Cancelar conta</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

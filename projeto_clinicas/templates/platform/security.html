@@ -1,0 +1,59 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}Monitoramento de seguranca{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header">Tentativas de login com falha</div>
+      <ul class="list-group list-group-flush small">
+        {% for attempt in failed_attempts %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ attempt.email }} - {{ attempt.ip_address }}</span>
+            <span class="text-body-secondary">{{ attempt.created_at|date:"d/m H:i" }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma tentativa recente.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Contas bloqueadas</div>
+      <ul class="list-group list-group-flush small">
+        {% for u in locked_users %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ u.email }}</span>
+            <span class="text-body-secondary">ate {{ u.locked_until|date:"d/m H:i" }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhuma conta bloqueada.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header">Acessos negados</div>
+      <ul class="list-group list-group-flush small">
+        {% for log in denied %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <span>{{ log.user_email }}</span>
+              <span class="text-body-secondary">{{ log.created_at|date:"d/m H:i" }}</span>
+            </div>
+            <div class="text-body-secondary">{{ log.description|truncatechars:80 }}</div>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum evento.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">Acessos a dados sensiveis</div>
+      <ul class="list-group list-group-flush small">
+        {% for log in sensitive_access %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ log.user_email }} - {{ log.clinic_name }}</span>
+            <span class="text-body-secondary">{{ log.created_at|date:"d/m H:i" }}</span>
+          </li>
+        {% empty %}<li class="list-group-item text-body-secondary">Nenhum evento.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

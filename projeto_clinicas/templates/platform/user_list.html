@@ -1,0 +1,52 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}Usuarios da plataforma{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-6"><input class="form-control" type="search" name="q" placeholder="Nome ou e-mail" value="{{ request.GET.q|default:'' }}"></div>
+  <div class="col-md-4">
+    <input class="form-control" type="text" name="role" placeholder="Filtrar por perfil (codigo)"
+           value="{{ request.GET.role|default:'' }}">
+  </div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Clinicas</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.full_name }}</td>
+            <td class="small">{{ u.email }}</td>
+            <td><span class="badge text-bg-light border">{{ u.get_role_display }}</span></td>
+            <td class="small">{{ u.clinic_memberships.count }}</td>
+            <td>{% if u.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                {% if u.pk != user.pk %}
+                  <a class="btn btn-outline-secondary" href="{% url 'platform:user-password-reset' u.pk %}">
+                    <i class="bi bi-key"></i> Senha
+                  </a>
+                {% endif %}
+                <form method="post" action="{% url 'platform:user-toggle' u.pk %}"
+                      data-confirm="Alternar o status de acesso deste usuario?">
+                  {% csrf_token %}
+                  <button class="btn btn-outline-secondary" type="submit">
+                    {% if u.is_active %}Desativar{% else %}Reativar{% endif %}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-body-secondary">Nenhum usuario encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

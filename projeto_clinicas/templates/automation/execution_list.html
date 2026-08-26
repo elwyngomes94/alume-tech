@@ -1,0 +1,71 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Historico de automacoes{% endblock %}
+{% block page_subtitle %}Execucoes das automacoes desta clinica.{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.automation_manage %}
+    <a class="btn btn-outline-secondary" href="{% url 'automation:settings' %}">
+      <i class="bi bi-gear"></i> Configuracoes
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-4">
+    <select class="form-select" name="automation">
+      <option value="">Todas as automacoes</option>
+      {% for automation in automations %}
+        <option value="{{ automation.codename }}" {% if request.GET.automation == automation.codename %}selected{% endif %}>
+          {{ automation.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><input class="form-control" type="date" name="start" value="{{ request.GET.start }}"></div>
+  <div class="col-md-2"><input class="form-control" type="date" name="end" value="{{ request.GET.end }}"></div>
+  <div class="col-md-1 d-grid"><button class="btn btn-outline-primary btn-sm">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Data</th><th>Automacao</th><th>Status</th><th>Tentativas</th><th>Detalhes</th></tr></thead>
+      <tbody>
+        {% for execution in executions %}
+          <tr>
+            <td class="small">{{ execution.started_at|date:"d/m/Y H:i:s" }}</td>
+            <td class="small">{{ execution.automation.name }}</td>
+            <td>
+              {% if execution.status == "success" %}<span class="badge text-bg-success">Sucesso</span>
+              {% elif execution.status == "skipped" %}<span class="badge text-bg-secondary">Ignorada</span>
+              {% elif execution.status == "failed" %}<span class="badge text-bg-danger">Falhou</span>
+              {% else %}<span class="badge text-bg-light border">Em andamento</span>{% endif %}
+            </td>
+            <td class="small">{{ execution.attempts }}</td>
+            <td class="small">
+              {% if execution.status == "failed" %}
+                {{ execution.last_error|truncatechars:80 }}
+              {% else %}
+                {{ execution.result|default:"-" }}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-body-secondary">Nenhuma automacao executada ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

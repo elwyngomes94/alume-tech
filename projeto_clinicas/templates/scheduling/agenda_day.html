@@ -1,0 +1,85 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Agenda - {{ selected_date|date:"d/m/Y" }}{% endblock %}
+{% block page_subtitle %}{{ summary.total }} agendamento(s) hoje.{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.appointment_add %}
+    <a class="btn btn-primary" href="{% url 'scheduling:appointment-create' %}?date={{ selected_date|date:'Y-m-d' }}">
+      <i class="bi bi-plus-lg"></i> Novo agendamento
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% include "scheduling/_agenda_filters.html" %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-sm btn-outline-secondary" href="?date={{ previous_day|date:'Y-m-d' }}&professional={{ request.GET.professional }}">
+    <i class="bi bi-chevron-left"></i> Anterior
+  </a>
+  <strong>{{ selected_date|date:"l, d \\d\\e F \\d\\e Y" }}</strong>
+  <a class="btn btn-sm btn-outline-secondary" href="?date={{ next_day|date:'Y-m-d' }}&professional={{ request.GET.professional }}">
+    Proximo <i class="bi bi-chevron-right"></i>
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        {% for appointment in appointments %}
+          <div class="jja-slot border-{{ appointment.status_color }}">
+            <span class="time">{{ appointment.start_at|time:"H:i" }}</span>
+            <div class="flex-grow-1">
+              <a href="{% url 'scheduling:appointment-detail' appointment.pk %}">{{ appointment.patient.display_name }}</a>
+              <div class="small text-body-secondary">
+                {{ appointment.professional.display_name }} &middot; {{ appointment.service|default:"Sem servico" }}
+              </div>
+            </div>
+            {% if appointment.payment_badge %}
+              <span class="badge text-bg-{{ appointment.payment_badge.css }} me-1"
+                    title="Pagamento: {{ appointment.payment_badge.label }}">
+                {{ appointment.payment_badge.emoji }} {{ appointment.payment_badge.label }}
+              </span>
+            {% endif %}
+            <span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span>
+          </div>
+        {% empty %}
+          <p class="text-body-secondary mb-0">Nenhum agendamento para esta data.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Resumo do dia</div>
+      <ul class="list-group list-group-flush small">
+        <li class="list-group-item d-flex justify-content-between"><span>Total</span><strong>{{ summary.total }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Confirmados</span><strong>{{ summary.confirmed }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Aguardando</span><strong>{{ summary.waiting }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Concluidos</span><strong>{{ summary.completed }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Cancelados</span><strong>{{ summary.canceled }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Faltas</span><strong>{{ summary.no_show }}</strong></li>
+      </ul>
+    </div>
+
+    {% if selected_professional %}
+      <div class="card">
+        <div class="card-header">Horarios de {{ selected_professional.display_name }}</div>
+        <div class="card-body">
+          {% for slot in slots %}
+            <span class="badge {% if slot.available %}text-bg-light border{% else %}text-bg-secondary{% endif %} me-1 mb-1"
+                  title="{{ slot.reason }}">
+              {{ slot.label }}
+            </span>
+          {% empty %}
+            <p class="text-body-secondary small mb-0">Sem disponibilidade cadastrada.</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

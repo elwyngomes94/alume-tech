@@ -1,0 +1,32 @@
+{% extends "layouts/portal.html" %}
+
+{% block page_title %}Meus agendamentos{% endblock %}
+{% block page_subtitle %}<a href="{% url 'portal:appointment-request' %}">Solicitar novo agendamento</a>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <ul class="list-group list-group-flush">
+    {% for appointment in appointments %}
+      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong>{{ appointment.start_at|date:"d/m/Y H:i" }}</strong>
+          <span class="badge text-bg-light border">{{ appointment.get_status_display }}</span>
+          <div class="small text-body-secondary">
+            {{ appointment.professional.display_name }} - {{ appointment.service|default:"" }}
+          </div>
+        </div>
+        {% if appointment.status == 'scheduled' or appointment.status == 'confirmed' %}
+          <form method="post" action="{% url 'portal:appointment-cancel' appointment.pk %}"
+                data-confirm="Cancelar este agendamento?">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit">Cancelar</button>
+          </form>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="list-group-item text-body-secondary">Nenhum agendamento encontrado.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

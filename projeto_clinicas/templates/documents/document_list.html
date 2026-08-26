@@ -1,0 +1,58 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Documentos{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.report_view %}
+    <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'documentos' %}"><i class="bi bi-bar-chart"></i> Relatorio</a>
+  {% endif %}
+  <a class="btn btn-outline-secondary" href="{% url 'documents:category-list' %}">Categorias</a>
+  {% if perms_clinic.document_add %}
+    <a class="btn btn-primary" href="{% url 'documents:upload' %}"><i class="bi bi-upload"></i> Enviar documento</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-5"><input class="form-control" type="search" name="q" placeholder="Titulo ou paciente" value="{{ request.GET.q|default:'' }}"></div>
+  <div class="col-md-4">
+    <select class="form-select" name="category">
+      <option value="">Todas as categorias</option>
+      {% for category in categories %}
+        <option value="{{ category.pk }}" {% if request.GET.category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Titulo</th><th>Paciente</th><th>Categoria</th><th>Tamanho</th><th>Enviado em</th><th></th></tr></thead>
+      <tbody>
+        {% for document in documents %}
+          <tr>
+            <td>{{ document.title }} {% if document.is_sensitive %}<i class="bi bi-shield-lock text-warning" title="Dado sensivel"></i>{% endif %}</td>
+            <td class="small">{{ document.patient|default:"-" }}</td>
+            <td class="small">{{ document.category|default:"-" }}</td>
+            <td class="small">{{ document.human_size }}</td>
+            <td class="small">{{ document.created_at|date:"d/m/Y H:i" }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'documents:download' document.pk %}">Baixar</a>
+              {% if perms_clinic.document_delete %}
+                <form class="d-inline" method="post" action="{% url 'documents:delete' document.pk %}" data-confirm="Excluir este documento?">
+                  {% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-body-secondary">Nenhum documento encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

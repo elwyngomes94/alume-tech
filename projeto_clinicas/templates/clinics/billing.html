@@ -1,0 +1,74 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Plano e faturamento{% endblock %}
+
+{% block content %}
+{% if subscription %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">Plano contratado</div>
+      <div class="card-body">
+        <h4>{{ subscription.plan.name }}</h4>
+        <span class="badge text-bg-{% if subscription.status == 'active' %}success{% elif subscription.status == 'trial' %}info{% else %}danger{% endif %}">
+          {{ subscription.get_status_display }}
+        </span>
+        <dl class="row mt-3 small mb-0">
+          <dt class="col-6">Ciclo</dt><dd class="col-6">{{ subscription.get_cycle_display }}</dd>
+          <dt class="col-6">Valor</dt><dd class="col-6">R$ {{ subscription.price }}</dd>
+          <dt class="col-6">Inicio</dt><dd class="col-6">{{ subscription.started_at|date:"d/m/Y" }}</dd>
+          {% if subscription.trial_ends_at %}
+            <dt class="col-6">Fim da avaliacao</dt><dd class="col-6">{{ subscription.trial_ends_at|date:"d/m/Y" }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header">Uso do plano</div>
+      <div class="card-body row g-3">
+        {% for limit in limits %}
+          <div class="col-md-6">
+            <div class="d-flex justify-content-between small">
+              <span class="text-capitalize">{{ limit.resource }}</span>
+              <span>{{ limit.used }}{% if not limit.unlimited %}/{{ limit.limit }}{% else %} (ilimitado){% endif %}</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar {% if limit.exceeded %}bg-danger{% endif %}" style="width: {{ limit.percent }}%"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Faturas</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Numero</th><th>Competencia</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for invoice in invoices %}
+              <tr>
+                <td>{{ invoice.number }}</td>
+                <td>{{ invoice.reference_month|date:"m/Y" }}</td>
+                <td>R$ {{ invoice.amount }}</td>
+                <td>{{ invoice.due_date|date:"d/m/Y" }}</td>
+                <td>
+                  <span class="badge text-bg-{% if invoice.status == 'paid' %}success{% elif invoice.is_overdue %}danger{% else %}warning{% endif %}">
+                    {{ invoice.get_status_display }}
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-body-secondary">Nenhuma fatura emitida.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+  <div class="alert alert-info">Esta clinica ainda nao possui uma assinatura vinculada.</div>
+{% endif %}
+{% endblock %}

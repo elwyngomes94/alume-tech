@@ -1,0 +1,49 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Busca{% endblock %}
+{% block page_subtitle %}Resultados restritos a {{ active_clinic }} e ao que voce tem permissao de ver.{% endblock %}
+
+{% block content %}
+<form class="jja-filters" method="get">
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi bi-search"></i></span>
+    <input class="form-control" type="search" name="q" value="{{ term }}" minlength="2" autofocus>
+    <button class="btn btn-primary" type="submit">Buscar</button>
+  </div>
+</form>
+
+{% if term and term|length < 2 %}
+  <p class="text-body-secondary">Digite ao menos 2 caracteres.</p>
+{% elif not has_results and term %}
+  <p class="text-body-secondary">Nenhum resultado encontrado para "{{ term }}".</p>
+{% endif %}
+
+{% for group, items in results.items %}
+  {% if items %}
+    <div class="card mb-3">
+      <div class="card-header">{{ group }}</div>
+      <ul class="list-group list-group-flush">
+        {% for item in items %}
+          <li class="list-group-item">
+            {% if group == "Pacientes" %}
+              <a href="{% url 'patients:detail' item.pk %}">{{ item.display_name }}</a>
+              <span class="text-body-secondary small">Prontuario #{{ item.record_number }}</span>
+            {% elif group == "Profissionais" %}
+              <a href="{% url 'professionals:detail' item.pk %}">{{ item.display_name }}</a>
+              <span class="text-body-secondary small">{{ item.registry_label }}</span>
+            {% elif group == "Agendamentos" %}
+              <a href="{% url 'scheduling:appointment-detail' item.pk %}">
+                {{ item.patient.display_name }} com {{ item.professional.display_name }}
+              </a>
+              <span class="text-body-secondary small">{{ item.start_at|date:"d/m/Y H:i" }}</span>
+            {% elif group == "Documentos" %}
+              <a href="{% url 'documents:list' %}?q={{ item.title }}">{{ item.title }}</a>
+              <span class="text-body-secondary small">{{ item.patient.display_name|default:"" }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endfor %}
+{% endblock %}

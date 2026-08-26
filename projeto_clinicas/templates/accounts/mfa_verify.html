@@ -1,0 +1,19 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_title %}Verificacao em duas etapas{% endblock %}
+{% block auth_subtitle %}Digite o codigo gerado pelo seu aplicativo autenticador.{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.code.id_for_label }}">Codigo de 6 digitos</label>
+    {{ form.code }}
+    {% for error in form.code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+  </div>
+  <button class="btn btn-primary w-100" type="submit">Verificar</button>
+</form>
+<div class="text-center mt-3">
+  <a href="{% url 'accounts:login' %}" class="small">Voltar ao login</a>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Lista de agendamentos{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.report_view %}
+    <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'agendamentos' %}"><i class="bi bi-bar-chart"></i> Relatorio</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% include "scheduling/_agenda_filters.html" %}
+
+<form class="jja-filters row g-2 mt-2" method="get">
+  <input type="hidden" name="professional" value="{{ request.GET.professional }}">
+  <div class="col-md-3"><input class="form-control" type="date" name="start" value="{{ request.GET.start }}"></div>
+  <div class="col-md-3"><input class="form-control" type="date" name="end" value="{{ request.GET.end }}"></div>
+  <div class="col-md-3">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3"><input class="form-control" type="search" name="q" placeholder="Paciente" value="{{ request.GET.q|default:'' }}"></div>
+  <div class="col-12"><button class="btn btn-outline-primary btn-sm">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Data</th><th>Paciente</th><th>Profissional</th><th>Servico</th><th>Status</th><th>Pagamento</th></tr></thead>
+      <tbody>
+        {% for appointment in appointments %}
+          <tr>
+            <td><a href="{% url 'scheduling:appointment-detail' appointment.pk %}">{{ appointment.start_at|date:"d/m/Y H:i" }}</a></td>
+            <td>{{ appointment.patient.display_name }}</td>
+            <td class="small">{{ appointment.professional.display_name }}</td>
+            <td class="small">{{ appointment.service|default:"-" }}</td>
+            <td><span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span></td>
+            <td>
+              {% if appointment.payment_badge %}
+                <span class="badge text-bg-{{ appointment.payment_badge.css }}">
+                  {{ appointment.payment_badge.emoji }} {{ appointment.payment_badge.label }}
+                </span>
+              {% else %}
+                <span class="text-body-secondary small">-</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-body-secondary">Nenhum agendamento encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

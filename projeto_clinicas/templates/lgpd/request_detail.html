@@ -1,0 +1,56 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Solicitacao de {{ request_obj.requester_name }}{% endblock %}
+{% block page_subtitle %}{{ request_obj.get_kind_display }} &middot; Prazo: {{ request_obj.due_date|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">Detalhes</div>
+      <div class="card-body small">
+        <dl class="row">
+          <dt class="col-4">Paciente</dt><dd class="col-8">{{ request_obj.patient|default:"-" }}</dd>
+          <dt class="col-4">E-mail</dt><dd class="col-8">{{ request_obj.requester_email }}</dd>
+          <dt class="col-4">Descricao</dt><dd class="col-8">{{ request_obj.description|default:"-"|linebreaksbr }}</dd>
+        </dl>
+        {% if request_obj.response %}
+          <hr><strong>Resposta:</strong><p>{{ request_obj.response|linebreaksbr }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">Resolver</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'lgpd:request-resolve' request_obj.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+              <option value="in_progress">Em analise</option>
+              <option value="completed">Concluida</option>
+              <option value="rejected">Recusada</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Resposta ao titular</label>
+            <textarea class="form-control" name="response" rows="4"></textarea>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Salvar</button>
+        </form>
+        {% if request_obj.patient %}
+          <hr>
+          <form method="post" action="{% url 'lgpd:anonymize' request_obj.patient.pk %}"
+                data-confirm="Anonimizar este paciente? A acao preserva o historico assistencial, mas remove os dados de identificacao.">
+            {% csrf_token %}
+            <input type="hidden" name="reason" value="Atendimento a solicitacao LGPD #{{ request_obj.pk }}">
+            <button class="btn btn-outline-danger w-100" type="submit">Anonimizar cadastro do paciente</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

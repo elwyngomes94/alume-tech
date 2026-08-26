@@ -1,0 +1,32 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}Planos{% endblock %}
+{% block page_actions %}<a class="btn btn-primary" href="{% url 'platform:plan-create' %}">Novo plano</a>{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  {% for plan in plans %}
+    <div class="col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>{{ plan.name }}</h5>
+          <span class="badge text-bg-light border">{{ plan.get_tier_display }}</span>
+          <div class="my-3">
+            <div class="fs-4 fw-bold">R$ {{ plan.monthly_price }}<span class="fs-6 text-body-secondary">/mes</span></div>
+          </div>
+          <ul class="list-unstyled small mb-3">
+            <li>{{ plan.max_professionals }} profissionais</li>
+            <li>{{ plan.max_users }} usuarios</li>
+            <li>{{ plan.max_patients }} pacientes</li>
+            <li>{{ plan.max_storage_mb }} MB de armazenamento</li>
+          </ul>
+          <p class="small text-body-secondary">{{ plan.subscribers }} assinante(s)</p>
+          <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'platform:plan-update' plan.pk %}">Editar</a>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-body-secondary">Nenhum plano cadastrado.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+from django.apps import AppConfig
+
+
+class AuditConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.audit"
+    label = "audit"
+    verbose_name = "Auditoria"
+
+    def ready(self):  # pragma: no cover - registro de signals
+        from . import signals  # noqa: F401

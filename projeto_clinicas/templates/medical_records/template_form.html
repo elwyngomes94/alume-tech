@@ -1,0 +1,41 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{% if form.instance.is_saved %}Editar modelo{% else %}Novo modelo de prontuario{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% include "includes/form.html" with form=form %}
+          <div class="mt-4 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">Salvar</button>
+            <a class="btn btn-light" href="{% url 'medical_records:template-list' %}">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="alert alert-info small">
+      <strong>Formato do JSON</strong>
+      <pre class="mb-0">{
+  "sections": [
+    {
+      "title": "Anamnese",
+      "fields": [
+        {"name": "queixa", "label": "Queixa principal",
+         "type": "textarea", "required": true},
+        {"name": "lado", "label": "Lado", "type": "select",
+         "options": ["Direito", "Esquerdo"]}
+      ]
+    }
+  ]
+}</pre>
+      <p class="mb-0 mt-2">Tipos aceitos: text, textarea, number, date, select, multiselect, checkbox.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

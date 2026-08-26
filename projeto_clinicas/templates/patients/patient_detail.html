@@ -1,0 +1,160 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ patient.display_name }}{% endblock %}
+{% block page_subtitle %}Prontuario #{{ patient.record_number }} &middot; {{ patient.get_status_display }}{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.appointment_add %}
+    <a class="btn btn-outline-primary" href="{% url 'scheduling:appointment-create' %}?patient={{ patient.pk }}">
+      <i class="bi bi-calendar-plus"></i> Agendar
+    </a>
+  {% endif %}
+  {% if can_view_records %}
+    <a class="btn btn-outline-primary" href="{% url 'medical_records:record-detail' patient.pk %}">
+      <i class="bi bi-journal-medical"></i> Prontuario
+    </a>
+  {% endif %}
+  {% if perms_clinic.patient_change %}
+    <a class="btn btn-primary" href="{% url 'patients:update' patient.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Identificacao</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5">CPF</dt><dd class="col-7">{{ patient.formatted_cpf|default:"-" }}</dd>
+          <dt class="col-5">Nascimento</dt><dd class="col-7">{{ patient.birth_date|date:"d/m/Y"|default:"-" }} {% if patient.age %}({{ patient.age }} anos){% endif %}</dd>
+          <dt class="col-5">Genero</dt><dd class="col-7">{{ patient.get_gender_display }}</dd>
+          <dt class="col-5">Telefone</dt><dd class="col-7">{{ patient.primary_phone|default:"-" }}</dd>
+          <dt class="col-5">E-mail</dt><dd class="col-7">{{ patient.email|default:"-" }}</dd>
+          <dt class="col-5">Convenio</dt><dd class="col-7">{{ patient.insurance|default:"Particular" }}</dd>
+        </dl>
+        {% if patient.is_minor %}
+          <hr>
+          <strong>Responsavel:</strong> {{ patient.guardian_name }} ({{ patient.guardian_relationship }})<br>
+          {{ patient.guardian_phone }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Saude</div>
+      <div class="card-body small">
+        <p><strong>Tipo sanguineo:</strong> {{ patient.blood_type|default:"-" }}</p>
+        <p><strong>Alergias:</strong> {{ patient.allergies|default:"Nenhuma registrada"|linebreaksbr }}</p>
+        <p><strong>Condicoes cronicas:</strong> {{ patient.chronic_conditions|default:"-"|linebreaksbr }}</p>
+        <p class="mb-0"><strong>Medicamentos em uso:</strong> {{ patient.continuous_medications|default:"-"|linebreaksbr }}</p>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Enderecos e contatos</div>
+      <ul class="list-group list-group-flush small">
+        {% for address in addresses %}
+          <li class="list-group-item">{{ address.street }}, {{ address.number }} - {{ address.city }}/{{ address.state }}</li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum endereco cadastrado.</li>
+        {% endfor %}
+        {% for contact in contacts %}
+          <li class="list-group-item">{{ contact.name }} ({{ contact.relationship }}) - {{ contact.phone }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% if perms_clinic.patient_view_sensitive %}
+      <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'patients:export' patient.pk %}">
+        <i class="bi bi-download"></i> Exportar dados (LGPD)
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>Agendamentos recentes</span>
+        <a class="small" href="{% url 'scheduling:agenda-list' %}?q={{ patient.display_name }}">Ver todos</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Data</th><th>Profissional</th><th>Servico</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for appointment in appointments %}
+              <tr>
+                <td>
+                  <a href="{% url 'scheduling:appointment-detail' appointment.pk %}">
+                    {{ appointment.start_at|date:"d/m/Y H:i" }}
+                  </a>
+                </td>
+                <td class="small">{{ appointment.professional.display_name }}</td>
+                <td class="small">{{ appointment.service|default:"-" }}</td>
+                <td><span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-body-secondary">Nenhum agendamento registrado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if can_view_records %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between">
+          <span>Ultimos registros do prontuario</span>
+          <a class="small" href="{% url 'medical_records:record-detail' patient.pk %}">Ver prontuario completo</a>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for entry in record_entries %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>
+                <a href="{% url 'medical_records:entry-detail' entry.pk %}">{{ entry.title|default:entry.template.name }}</a>
+                <span class="text-body-secondary small d-block">{{ entry.professional.display_name }}</span>
+              </span>
+              <span class="text-body-secondary small">{{ entry.attended_at|date:"d/m/Y" }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-body-secondary">Nenhum atendimento registrado.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if documents %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between">
+          <span>Documentos</span>
+          {% if perms_clinic.document_add %}
+            <a class="small" href="{% url 'documents:upload' %}?patient={{ patient.pk }}">Enviar documento</a>
+          {% endif %}
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for document in documents %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ document.title }} <span class="text-body-secondary small">({{ document.category|default:"" }})</span></span>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'documents:download' document.pk %}">Baixar</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if examinations %}
+      <div class="card">
+        <div class="card-header">Exames</div>
+        <ul class="list-group list-group-flush">
+          {% for request_obj in examinations %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{% url 'examinations:request-detail' request_obj.pk %}">Solicitacao #{{ request_obj.number }}</a>
+              <span class="badge text-bg-light">{{ request_obj.get_status_display }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

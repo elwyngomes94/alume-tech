@@ -1,0 +1,74 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Relatorios{% endblock %}
+{% block page_subtitle %}Periodo: {{ start|date:"d/m/Y" }} a {{ end|date:"d/m/Y" }}{% endblock %}
+
+{% block page_actions %}
+<form method="get" class="d-flex gap-2">
+  <select class="form-select form-select-sm" name="period" onchange="this.form.submit()">
+    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+    <option value="90d" {% if period == '90d' %}selected{% endif %}>90 dias</option>
+    <option value="12m" {% if period == '12m' %}selected{% endif %}>12 meses</option>
+  </select>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Agendamentos</div><div class="value">{{ indicators.total_appointments }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Concluidos</div><div class="value">{{ indicators.completed }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Cancelados</div><div class="value">{{ indicators.canceled }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="jja-stat"><div class="label">Novos pacientes</div><div class="value">{{ indicators.new_patients }}</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card"><div class="card-header">Agendamentos por dia</div>
+      <div class="card-body"><canvas id="chartDays" height="110"></canvas></div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header">Por status</div>
+      <div class="card-body"><canvas id="chartStatus" height="180"></canvas></div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for key, label in reports %}
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <span>{{ label }}</span>
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'reports:detail' key %}?period={{ period }}">Ver</a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ indicators.chart_days|json_script:"days" }}
+{{ indicators.chart_day_values|json_script:"dayValues" }}
+{{ indicators.chart_status_labels|json_script:"statusLabels" }}
+{{ indicators.chart_status_values|json_script:"statusValues" }}
+<script>
+(function () {
+  const read = (id) => JSON.parse(document.getElementById(id).textContent);
+  const primary = getComputedStyle(document.documentElement).getPropertyValue("--jja-primary").trim();
+  new Chart(document.getElementById("chartDays"), {
+    type: "bar",
+    data: { labels: read("days"), datasets: [{ data: read("dayValues"), backgroundColor: primary, borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+  new Chart(document.getElementById("chartStatus"), {
+    type: "doughnut",
+    data: { labels: read("statusLabels"),
+            datasets: [{ data: read("statusValues"),
+                        backgroundColor: ["#6c757d", primary, "#0dcaf0", "#ffc107", "#198754", "#dc3545", "#212529"] }] },
+    options: { plugins: { legend: { position: "bottom" } } }
+  });
+})();
+</script>
+{% endblock %}

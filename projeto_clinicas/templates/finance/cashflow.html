@@ -1,0 +1,96 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Fluxo de caixa{% endblock %}
+{% block page_subtitle %}{{ start|date:"d/m/Y" }} a {{ end|date:"d/m/Y" }}{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'fluxo_caixa' %}"><i class="bi bi-bar-chart"></i> Relatorio</a>
+  {% if perms_clinic.finance_add %}
+    <a class="btn btn-primary" href="{% url 'finance:transaction-create' %}"><i class="bi bi-plus-lg"></i> Lancamento avulso</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-2">
+    <select class="form-select" name="period" onchange="this.form.submit()">
+      <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+      <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+      <option value="90d" {% if period == '90d' %}selected{% endif %}>90 dias</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="kind">
+      <option value="">Entradas e saidas</option>
+      <option value="income" {% if request.GET.kind == "income" %}selected{% endif %}>Somente entradas</option>
+      <option value="expense" {% if request.GET.kind == "expense" %}selected{% endif %}>Somente saidas</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="category">
+      <option value="">Categoria</option>
+      {% for c in categories %}<option value="{{ c.pk }}" {% if request.GET.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="method">
+      <option value="">Forma de pagamento</option>
+      {% for m in methods %}<option value="{{ m.pk }}" {% if request.GET.method == m.pk|stringformat:"s" %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="cost_center">
+      <option value="">Centro de custo</option>
+      {% for cc in cost_centers %}<option value="{{ cc.pk }}" {% if request.GET.cost_center == cc.pk|stringformat:"s" %}selected{% endif %}>{{ cc.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="professional">
+      <option value="">Profissional</option>
+      {% for p in professionals %}<option value="{{ p.pk }}" {% if request.GET.professional == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.display_name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+
+<div class="card mb-3">
+  <div class="card-body d-flex justify-content-between">
+    <span>Saldo anterior a {{ start|date:"d/m/Y" }}</span>
+    <strong>R$ {{ opening_balance|floatformat:2 }}</strong>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Descricao</th><th>Forma</th><th>Valor</th><th>Saldo</th></tr></thead>
+      <tbody>
+        {% for entry in entries %}
+          <tr>
+            <td class="small">{{ entry.transaction.paid_at|date:"d/m/Y H:i" }}</td>
+            <td>
+              {% if entry.transaction.kind == "income" %}
+                <span class="badge text-bg-success">Entrada</span>
+              {% else %}
+                <span class="badge text-bg-danger">Saida</span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {{ entry.transaction.notes|default:entry.transaction.category|default:"-" }}
+              {% if entry.transaction.receivable %}<br><a class="small" href="{% url 'finance:receivable-detail' entry.transaction.receivable.pk %}">ver conta</a>{% endif %}
+              {% if entry.transaction.payable %}<br><a class="small" href="{% url 'finance:payable-detail' entry.transaction.payable.pk %}">ver conta</a>{% endif %}
+            </td>
+            <td class="small">{{ entry.transaction.method }}</td>
+            <td class="{% if entry.transaction.kind == 'income' %}text-success{% else %}text-danger{% endif %}">
+              R$ {{ entry.transaction.amount|floatformat:2 }}
+            </td>
+            <td><strong>R$ {{ entry.running_balance|floatformat:2 }}</strong></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-body-secondary">Nenhum lancamento no periodo.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

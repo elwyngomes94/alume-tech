@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}Layout do portal do paciente (/patient/).{% endcomment %}
+
+{% block body %}
+<nav class="navbar navbar-expand-lg jja-portal-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'portal:home' %}">
+      {% if clinic and clinic.logo %}
+        <img src="{{ clinic.logo.url }}" alt="{{ clinic }}" height="32">
+      {% else %}
+        <img src="{% static 'img/jja-mark.png' %}" alt="Alume Tech" height="32">
+      {% endif %}
+      <span>{{ clinic|default:PLATFORM_NAME }}</span>
+    </a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#portalNav" aria-label="Menu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="portalNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="{% url 'portal:home' %}">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'portal:appointments' %}">Agendamentos</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'portal:examinations' %}">Exames</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'portal:documents' %}">Documentos</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'portal:prescriptions' %}">Prescricoes</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'portal:history' %}">Historico</a></li>
+      </ul>
+      <ul class="navbar-nav align-items-lg-center">
+        <li class="nav-item">
+          <a class="nav-link position-relative" href="{% url 'notifications:list' %}">
+            <i class="bi bi-bell"></i>
+            {% if unread_notifications %}<span class="badge rounded-pill bg-danger">{{ unread_notifications }}</span>{% endif %}
+          </a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">{{ user.get_short_name }}</a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{% url 'portal:profile' %}">Meus dados</a></li>
+            <li><a class="dropdown-item" href="{% url 'portal:data-export' %}">Baixar meus dados (LGPD)</a></li>
+            <li><a class="dropdown-item" href="{% url 'accounts:security' %}">Seguranca</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button class="dropdown-item text-danger" type="submit">Sair</button>
+              </form>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  {% include "includes/messages.html" %}
+  <div class="mb-3">
+    <h1 class="h4 mb-0">{% block page_title %}{% endblock %}</h1>
+    <p class="text-body-secondary small mb-0">{% block page_subtitle %}{% endblock %}</p>
+  </div>
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="container py-4 text-center text-body-secondary small">
+  {{ clinic|default:PLATFORM_NAME }} &middot; Portal do paciente &middot; {% now "Y" %}
+</footer>
+{% endblock %}

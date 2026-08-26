@@ -1,0 +1,93 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Atendimento - {{ patient.display_name }}{% endblock %}
+{% block page_subtitle %}{% if template_obj %}Modelo: {{ template_obj.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="card mb-3">
+    <div class="card-header">Dados do atendimento</div>
+    <div class="card-body">
+      {% include "includes/form.html" with form=meta_form %}
+      {% if templates %}
+        <div class="form-text mt-2">
+          Trocar de modelo? <a href="?template={{ template_obj.pk }}">Recarregar</a> ou selecione outro modelo
+          no proprio campo acima.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if entry and revise_form %}
+    <div class="card mb-3 border-warning">
+      <div class="card-header">Motivo da retificacao</div>
+      <div class="card-body">{% include "includes/form.html" with form=revise_form %}</div>
+    </div>
+  {% endif %}
+
+  {% if vital_form %}
+    <div class="card mb-3">
+      <div class="card-header">Sinais vitais</div>
+      <div class="card-body">{% include "includes/form.html" with form=vital_form %}</div>
+    </div>
+  {% endif %}
+
+  {% for section_title, fields in dynamic_form.sections %}
+    <div class="card mb-3">
+      <div class="card-header">{{ section_title }}</div>
+      <div class="card-body row g-3">
+        {% for field in fields %}
+          <div class="col-md-6">
+            <label class="form-label" for="{{ field.id_for_label }}">
+              {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-outline-secondary" type="submit" name="action" value="draft">Salvar rascunho</button>
+    <button class="btn btn-primary" type="submit" name="action" value="sign">Salvar e assinar</button>
+    <a class="btn btn-light" href="{% url 'medical_records:record-detail' patient.pk %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const cidSearchUrl = "{% url 'medical_records:cid-search' %}";
+  document.querySelectorAll('[data-cid-search]').forEach(function (input, idx) {
+    const listId = "jjaCidList" + idx;
+    const datalist = document.createElement("datalist");
+    datalist.id = listId;
+    input.setAttribute("list", listId);
+    input.insertAdjacentElement("afterend", datalist);
+    let timer;
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      const term = input.value.trim();
+      if (term.length < 2) { datalist.innerHTML = ""; return; }
+      timer = setTimeout(function () {
+        fetch(cidSearchUrl + "?q=" + encodeURIComponent(term))
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            datalist.innerHTML = "";
+            (data.results || []).forEach(function (item) {
+              const option = document.createElement("option");
+              option.value = item.text;
+              datalist.appendChild(option);
+            });
+          });
+      }, 250);
+    });
+  });
+})();
+</script>
+{% endblock %}

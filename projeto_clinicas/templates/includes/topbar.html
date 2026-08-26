@@ -1,0 +1,90 @@
+{% comment %}Barra superior: busca global, troca de clinica, notificacoes e conta.{% endcomment %}
+<header class="jja-topbar">
+  <button class="btn btn-light d-lg-none" type="button" id="jjaSidebarToggle" aria-label="Abrir menu">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <form class="jja-search" action="{% url 'dashboard:search' %}" method="get" role="search">
+    <i class="bi bi-search"></i>
+    <input type="search" name="q" class="form-control" placeholder="Buscar paciente, profissional, agendamento..."
+           value="{{ request.GET.q|default:'' }}" aria-label="Busca global" minlength="2">
+  </form>
+
+  <div class="ms-auto d-flex align-items-center gap-2">
+    {% if available_clinics|length > 1 %}
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-building"></i>
+          <span class="d-none d-md-inline">{{ active_clinic|truncatechars:22 }}</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">Trocar de clinica</h6></li>
+          {% for clinic in available_clinics %}
+            <li>
+              <form action="{% url 'accounts:clinic-switch' clinic.pk %}" method="post" class="px-2">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button class="dropdown-item {% if active_clinic and clinic.pk == active_clinic.pk %}active{% endif %}" type="submit">
+                  {{ clinic }}
+                </button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="dropdown">
+      <button class="btn btn-light position-relative" data-bs-toggle="dropdown" aria-label="Notificacoes">
+        <i class="bi bi-bell"></i>
+        {% if unread_notifications %}
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+            {{ unread_notifications }}
+          </span>
+        {% endif %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end jja-notifications">
+        <li><h6 class="dropdown-header">Notificacoes</h6></li>
+        {% for notification in recent_notifications %}
+          <li>
+            <form method="post" action="{% url 'notifications:read' notification.pk %}">
+              {% csrf_token %}
+              <button class="dropdown-item text-wrap {% if not notification.is_read %}fw-semibold{% endif %}" type="submit">
+                <span class="badge text-bg-{{ notification.level }}">{{ notification.get_event_display }}</span>
+                <div>{{ notification.title }}</div>
+                <small class="text-body-secondary">{{ notification.created_at|date:"d/m H:i" }}</small>
+              </button>
+            </form>
+          </li>
+        {% empty %}
+          <li><span class="dropdown-item-text text-body-secondary">Nenhuma notificacao.</span></li>
+        {% endfor %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'notifications:list' %}">Ver todas</a></li>
+      </ul>
+    </div>
+
+    <div class="dropdown">
+      <button class="btn btn-light d-flex align-items-center gap-2" data-bs-toggle="dropdown">
+        <span class="jja-avatar">{{ user.initials }}</span>
+        <span class="d-none d-md-inline small">{{ user.get_short_name }}</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">{{ user.email }}</h6></li>
+        {% if active_membership %}
+          <li><span class="dropdown-item-text small text-body-secondary">{{ active_membership.get_role_display }}</span></li>
+        {% endif %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person"></i> Meu perfil</a></li>
+        <li><a class="dropdown-item" href="{% url 'accounts:security' %}"><i class="bi bi-shield-check"></i> Seguranca</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right"></i> Sair</button>
+          </form>
+        </li>
+      </ul>
+    </div>
+  </div>
+</header>

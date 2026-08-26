@@ -1,0 +1,54 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{% if form.instance.is_saved %}Editar paciente{% else %}Novo paciente{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="card mb-3">
+    <div class="card-header">Dados do paciente</div>
+    <div class="card-body">{% include "includes/form.html" with form=form %}</div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Enderecos</div>
+    <div class="card-body">
+      {{ address_formset.management_form }}
+      {% for address_form in address_formset %}
+        <div class="border rounded p-3 mb-2">
+          {% include "includes/form.html" with form=address_form %}
+          {% if address_form.instance.is_saved %}
+            <div class="form-check mt-2">
+              {{ address_form.DELETE }}
+              <label class="form-check-label">Remover este endereco</label>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Contatos / responsaveis</div>
+    <div class="card-body">
+      {{ contact_formset.management_form }}
+      {% for contact_form in contact_formset %}
+        <div class="border rounded p-3 mb-2">
+          {% include "includes/form.html" with form=contact_form %}
+          {% if contact_form.instance.is_saved %}
+            <div class="form-check mt-2">
+              {{ contact_form.DELETE }}
+              <label class="form-check-label">Remover este contato</label>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-primary" type="submit">Salvar paciente</button>
+    <a class="btn btn-light" href="{% url 'patients:list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

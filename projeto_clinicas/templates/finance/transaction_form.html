@@ -1,0 +1,19 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Novo lancamento avulso{% endblock %}
+{% block page_subtitle %}Para movimentacoes que nao vem de uma conta a receber/pagar.{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Salvar</button>
+        <a class="btn btn-light" href="{% url 'finance:cashflow' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

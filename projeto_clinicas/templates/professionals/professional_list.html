@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Profissionais{% endblock %}
+
+{% block page_actions %}
+  {% if perms_clinic.report_view %}
+    <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'profissionais' %}"><i class="bi bi-bar-chart"></i> Relatorio</a>
+  {% endif %}
+  {% if perms_clinic.professional_add %}
+    <a class="btn btn-primary" href="{% url 'professionals:create' %}"><i class="bi bi-plus-lg"></i> Novo profissional</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-4">
+    <input class="form-control" type="search" name="q" placeholder="Nome ou registro" value="{{ request.GET.q|default:'' }}">
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="specialty">
+      <option value="">Todas as especialidades</option>
+      {% for specialty in specialties %}
+        <option value="{{ specialty.pk }}" {% if request.GET.specialty == specialty.pk|stringformat:"s" %}selected{% endif %}>{{ specialty.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="active">
+      <option value="">Todos</option>
+      <option value="1" {% if request.GET.active == "1" %}selected{% endif %}>Ativos</option>
+      <option value="0" {% if request.GET.active == "0" %}selected{% endif %}>Inativos</option>
+    </select>
+  </div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary" type="submit">Filtrar</button></div>
+</form>
+
+<div class="row g-3">
+  {% for professional in professionals %}
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="mb-0"><a href="{% url 'professionals:detail' professional.pk %}">{{ professional.display_name }}</a></h5>
+              <small class="text-body-secondary">{{ professional.registry_label|default:"Sem registro" }}</small>
+            </div>
+            {% if professional.is_active %}<span class="badge text-bg-success">Ativo</span>
+            {% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}
+          </div>
+          <p class="small mt-2 mb-0">
+            {% for specialty in professional.specialties.all %}
+              <span class="badge text-bg-light border">{{ specialty.name }}</span>
+            {% empty %}<span class="text-body-secondary">Sem especialidade cadastrada</span>{% endfor %}
+          </p>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-body-secondary">Nenhum profissional encontrado.</p>
+  {% endfor %}
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

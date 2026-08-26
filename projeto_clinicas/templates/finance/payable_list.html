@@ -1,0 +1,54 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Contas a pagar{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'contas_pagar' %}">
+    <i class="bi bi-bar-chart"></i> Relatorio
+  </a>
+  {% if perms_clinic.finance_add %}
+    <a class="btn btn-primary" href="{% url 'finance:payable-create' %}"><i class="bi bi-plus-lg"></i> Nova conta</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form class="jja-filters row g-2" method="get">
+  <div class="col-md-5"><input class="form-control" type="search" name="q" placeholder="Fornecedor" value="{{ request.GET.q|default:'' }}"></div>
+  <div class="col-md-4">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Fornecedor</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Saldo</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for item in payables %}
+          <tr>
+            <td><a href="{% url 'finance:payable-detail' item.pk %}">{{ item.supplier_name }}</a></td>
+            <td class="small">{{ item.category }}</td>
+            <td class="small">{{ item.due_date|date:"d/m/Y" }}</td>
+            <td>R$ {{ item.amount|floatformat:2 }}</td>
+            <td>R$ {{ item.balance|floatformat:2 }}</td>
+            <td>
+              <span class="badge text-bg-{% if item.status == 'paid' %}success{% elif item.status == 'overdue' %}danger{% elif item.status == 'partial' %}warning{% elif item.status == 'canceled' %}secondary{% else %}light border{% endif %}">
+                {{ item.get_status_display }}
+              </span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-body-secondary">Nenhuma conta a pagar encontrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}
