@@ -1,0 +1,168 @@
+# Blueprint de deploy no Render (render.com) para o Alume Tech.
+#
+# Cria, a partir do Dockerfile ja existente no projeto: o servico web
+# (Gunicorn), o worker do Celery, o Celery Beat (tarefas agendadas), um
+# banco Postgres gerenciado e um Redis gerenciado (fila/broker + cache).
+#
+# Como usar: em render.com -> New -> Blueprint -> selecione este
+# repositorio. O Render le este arquivo e sugere a criacao dos servicos
+# abaixo. Revise os planos/regiao na tela de confirmacao antes de aplicar.
+#
+# Depois do primeiro deploy, crie o superusuario/dados iniciais via
+# "Shell" do servico alumetech-web (aba Shell no painel do Render):
+#   python manage.py migrate --noinput
+#   python manage.py createsuperuser
+#   python manage.py seed_cid_codes
+
+databases:
+  - name: alumetech-db
+    databaseName: alumetech
+    user: alumetech
+    plan: starter
+    postgresMajorVersion: "16"
+
+services:
+  - type: redis
+    name: alumetech-redis
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: alumetech-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /healthz/
+    preDeployCommand: >
+      python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput
+    dockerCommand: >
+      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    disk:
+      name: alumetech-data
+      mountPath: /data
+      sizeGB: 5
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: alumetech-web.onrender.com
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: https://alumetech-web.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alumetech-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "False"
+      - key: MEDIA_ROOT
+        value: /data/media
+      - key: PRIVATE_MEDIA_ROOT
+        value: /data/private_media
+      - key: BACKUP_ROOT
+        value: /data/backups
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.console.EmailBackend
+      - key: PLATFORM_NAME
+        value: Alume Tech
+      - key: SENTRY_DSN
+        value: ""
+
+  # Worker e Beat NAO montam o disco persistente: no Render, discos sao
+  # exclusivos de cada servico (nao sao compartilhados entre servicos como
+  # os volumes nomeados do docker-compose). Por isso essas duas tarefas
+  # nao enxergam os arquivos de midia salvos pelo servico web -- o backup
+  # automatico de documentos anexados ficara incompleto ate configurarmos
+  # armazenamento em nuvem (S3/R2) com django-storages; o backup do banco
+  # de dados (pg_dump) continua funcionando normalmente. Nao bloqueia o
+  # sistema entrar no ar, e uma melhoria para depois.
+  - type: worker
+    name: alumetech-celery-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: celery -A config worker -l info
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alumetech-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "False"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.console.EmailBackend
+
+  - type: worker
+    name: alumetech-celery-beat
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: celery -A config beat -l info
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alumetech-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: alumetech-redis
+          property: connectionString
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "False"

@@ -196,7 +196,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Midia publica (apenas logos e itens nao sensiveis)
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(BASE_DIR / "media")))
 
 # Midia privada: documentos clinicos, exames, anexos de pacientes.
 # NUNCA e servida diretamente pelo servidor web; somente via view autorizada.

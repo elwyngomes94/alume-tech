@@ -280,6 +280,22 @@ Versionada em `/api/v1/`, construida com Django REST Framework:
    (`send_default_pii=False` por padrao, para nao enviar dados pessoais ao
    monitoramento).
 
+### Deploy rapido no Render
+
+O arquivo `render.yaml` na raiz do projeto e um Blueprint pronto para o
+[Render](https://render.com): cria o servico web (Gunicorn via Docker),
+worker do Celery, Celery Beat, Postgres e Redis gerenciados, com HTTPS
+automatico e sem precisar mexer em servidor. Em Render -> New -> Blueprint,
+aponte para este repositorio e revise os planos sugeridos antes de aplicar.
+
+Limitacao conhecida: no Render, o disco persistente e exclusivo de cada
+servico (diferente dos volumes compartilhados do `docker-compose.yml`) --
+por isso o worker/beat nao tem acesso aos arquivos de midia salvos pelo
+servico web, e o backup automatico de documentos anexados fica incompleto
+ate configurarmos armazenamento em nuvem (S3/R2) com `django-storages`. O
+backup do banco de dados (`pg_dump`) funciona normalmente. Isso nao impede
+o sistema de entrar no ar -- e uma melhoria a fazer depois.
+
 ---
 
 Este projeto foi construido como uma aplicacao Django funcional completa —
