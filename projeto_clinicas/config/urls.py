@@ -18,6 +18,7 @@ from apps.core import views as core_views
 urlpatterns = [
     path("", core_views.RootRedirectView.as_view(), name="root"),
     path("healthz/", core_views.health_check, name="health-check"),
+    path("app/cep/<str:cep>/", core_views.cep_lookup, name="cep-lookup"),
     path("accounts/", include("apps.accounts.urls", namespace="accounts")),
     path("app/", include("apps.dashboard.urls", namespace="dashboard")),
     path("app/clinica/", include("apps.clinics.urls", namespace="clinics")),
@@ -28,6 +29,7 @@ urlpatterns = [
     path("app/exames/", include("apps.examinations.urls", namespace="examinations")),
     path("app/documentos/", include("apps.documents.urls", namespace="documents")),
     path("app/financeiro/", include("apps.finance.urls", namespace="finance")),
+    path("app/estoque/", include("apps.inventory.urls", namespace="inventory")),
     path("app/automacoes/", include("apps.automation.urls", namespace="automation")),
     path("app/notificacoes/", include("apps.notifications.urls", namespace="notifications")),
     path("app/relatorios/", include("apps.reports.urls", namespace="reports")),

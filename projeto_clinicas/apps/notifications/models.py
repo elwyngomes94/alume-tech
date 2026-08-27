@@ -13,6 +13,7 @@ class NotificationEvent(models.TextChoices):
     APPOINTMENT_CANCELED = "appointment_canceled", "Agendamento cancelado"
     APPOINTMENT_RESCHEDULED = "appointment_rescheduled", "Agendamento remarcado"
     APPOINTMENT_CONFIRMED = "appointment_confirmed", "Agendamento confirmado"
+    APPOINTMENT_CALLED = "appointment_called", "Paciente chamado"
     APPOINTMENT_REMINDER = "appointment_reminder", "Lembrete de atendimento"
     DOCUMENT_AVAILABLE = "document_available", "Novo documento disponivel"
     EXAM_RESULT = "exam_result", "Resultado de exame"

@@ -151,6 +151,7 @@ class Appointment(TenantModel):
         SCHEDULED = "scheduled", "Reservado"
         CONFIRMED = "confirmed", "Confirmado"
         CHECKED_IN = "checked_in", "Aguardando atendimento"
+        CALLED = "called", "Chamado"
         IN_PROGRESS = "in_progress", "Em atendimento"
         COMPLETED = "completed", "Concluido"
         CANCELED = "canceled", "Cancelado"
@@ -213,6 +214,7 @@ class Appointment(TenantModel):
 
     confirmed_at = models.DateTimeField(null=True, blank=True)
     checked_in_at = models.DateTimeField(null=True, blank=True)
+    called_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     canceled_at = models.DateTimeField(null=True, blank=True)
@@ -267,6 +269,7 @@ class Appointment(TenantModel):
             self.Status.SCHEDULED: "secondary",
             self.Status.CONFIRMED: "primary",
             self.Status.CHECKED_IN: "info",
+            self.Status.CALLED: "primary",
             self.Status.IN_PROGRESS: "warning",
             self.Status.COMPLETED: "success",
             self.Status.CANCELED: "danger",
@@ -313,7 +316,14 @@ class Appointment(TenantModel):
                 self.Status.NO_SHOW,
             },
             self.Status.CHECKED_IN: {
+                self.Status.CALLED,
                 self.Status.IN_PROGRESS,
+                self.Status.CANCELED,
+                self.Status.NO_SHOW,
+            },
+            self.Status.CALLED: {
+                self.Status.IN_PROGRESS,
+                self.Status.CHECKED_IN,
                 self.Status.CANCELED,
                 self.Status.NO_SHOW,
             },

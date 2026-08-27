@@ -6,6 +6,12 @@ app_name = "medical_records"
 
 urlpatterns = [
     path("paciente/<uuid:patient_id>/", views.RecordDetailView.as_view(), name="record-detail"),
+    path("paciente/<uuid:patient_id>/pdf/", views.RecordExportPDFView.as_view(), name="record-pdf"),
+    path(
+        "paciente/<uuid:patient_id>/imprimir/",
+        views.RecordPrintAckView.as_view(),
+        name="record-print-ack",
+    ),
     path(
         "paciente/<uuid:patient_id>/atendimento/novo/",
         views.RecordEntryCreateView.as_view(),

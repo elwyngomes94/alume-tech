@@ -12,6 +12,10 @@
 {% endblock %}
 
 {% block content %}
+<div class="mb-3">
+  {% include "includes/report_actions.html" with pdf_url=record_pdf_url print_ack_url=record_print_ack_url whatsapp_text=record_whatsapp_text %}
+</div>
+
 <ul class="nav nav-tabs mb-3" id="jjaRecordTabs" role="tablist">
   <li class="nav-item" role="presentation">
     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabResumo" type="button">Resumo</button>

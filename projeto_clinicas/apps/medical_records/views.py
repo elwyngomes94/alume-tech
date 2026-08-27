@@ -32,6 +32,7 @@ from apps.medical_records.models import (
     VitalSigns,
 )
 from apps.patients.models import Patient
+from apps.reports.exporters import export_record_pdf
 
 
 class RecordDetailView(ClinicViewMixin, TemplateView):
@@ -69,6 +70,11 @@ class RecordDetailView(ClinicViewMixin, TemplateView):
                 .order_by("-issued_at")[:20],
                 "documents": patient.documents.select_related("category")
                 .order_by("-created_at")[:20],
+                "record_pdf_url": reverse("medical_records:record-pdf", args=[patient.pk]),
+                "record_print_ack_url": reverse(
+                    "medical_records:record-print-ack", args=[patient.pk]
+                ),
+                "record_whatsapp_text": f"Prontuario de {patient.display_name}.",
             }
         )
         if self.request.user.has_clinic_perm("examination.view", self.request.clinic):
@@ -87,6 +93,97 @@ class RecordDetailView(ClinicViewMixin, TemplateView):
                 .order_by("-service_date")[:20]
             )
         return context
+
+
+class RecordExportPDFView(ClinicViewMixin, View):
+    """Gera o PDF completo do prontuario (atendimentos/prescricoes/exames)."""
+
+    required_permission = "medicalrecord.view"
+
+    def get(self, request, patient_id):
+        patient = get_object_or_404(Patient.objects.all(), pk=patient_id)
+        services.assert_can_access_patient_record(request.user, request.clinic, patient)
+        record = services.get_or_create_record(patient)
+
+        entries = (
+            MedicalRecordEntry.objects.filter(record=record, is_draft=False)
+            .select_related("professional", "template")
+            .order_by("-attended_at")
+        )
+        entry_rows = [
+            [
+                timezone.localtime(entry.attended_at).strftime("%d/%m/%Y %H:%M")
+                if entry.attended_at else "-",
+                entry.professional.display_name if entry.professional else "-",
+                entry.template.name if entry.template else "-",
+                "Assinado" if entry.is_signed else "Rascunho",
+            ]
+            for entry in entries
+        ]
+
+        prescriptions = patient.prescriptions.select_related("professional").order_by("-issued_at")[:50]
+        prescription_rows = [
+            [
+                timezone.localtime(prescription.issued_at).strftime("%d/%m/%Y")
+                if prescription.issued_at else "-",
+                prescription.professional.display_name if prescription.professional else "-",
+                prescription.get_kind_display(),
+                ", ".join(prescription.items)[:120],
+            ]
+            for prescription in prescriptions
+        ]
+
+        exams = patient.examination_requests.select_related("professional").order_by("-requested_at")[:50]
+        exam_rows = [
+            [
+                timezone.localtime(exam.requested_at).strftime("%d/%m/%Y")
+                if exam.requested_at else "-",
+                exam.professional.display_name if exam.professional else "-",
+                exam.get_status_display(),
+            ]
+            for exam in exams
+        ]
+
+        log_action(
+            AuditAction.EXPORT,
+            obj=record,
+            description="Exportacao do prontuario em PDF",
+            request=request,
+            is_sensitive=True,
+        )
+        return export_record_pdf(
+            f"prontuario-{patient.pk}",
+            patient,
+            entry_rows,
+            prescription_rows,
+            exam_rows,
+            clinic=request.clinic,
+        )
+
+
+class RecordPrintAckView(ClinicViewMixin, View):
+    """
+    So registra a auditoria de impressao (``AuditAction.PRINT``) -- o
+    template chama esta rota via ``fetch()`` antes de ``window.print()``,
+    para que "visualizado", "exportado" e "impresso" fiquem como acoes
+    distintas na trilha de auditoria, como visualizacao/criacao/edicao ja
+    ficam.
+    """
+
+    required_permission = "medicalrecord.view"
+
+    def post(self, request, patient_id):
+        patient = get_object_or_404(Patient.objects.all(), pk=patient_id)
+        services.assert_can_access_patient_record(request.user, request.clinic, patient)
+        record = services.get_or_create_record(patient)
+        log_action(
+            AuditAction.PRINT,
+            obj=record,
+            description="Impressao do prontuario",
+            request=request,
+            is_sensitive=True,
+        )
+        return JsonResponse({"ok": True})
 
 
 class RecordEntryCreateView(ClinicViewMixin, View):

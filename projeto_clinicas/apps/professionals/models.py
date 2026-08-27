@@ -6,7 +6,7 @@ from django.db import models
 from django.urls import reverse
 
 from apps.core.models import ActiveStatusMixin, TenantModel
-from apps.core.validators import validate_cpf, validate_phone
+from apps.core.validators import validate_cep, validate_cpf, validate_phone
 
 COUNCIL_CHOICES = [
     ("CRM", "CRM - Medicina"),
@@ -45,6 +45,15 @@ class Professional(TenantModel, ActiveStatusMixin):
     email = models.EmailField("e-mail", blank=True)
     phone = models.CharField("telefone", max_length=20, blank=True, validators=[validate_phone])
     photo = models.ImageField("foto", upload_to="professionals/photos/", null=True, blank=True)
+
+    # Endereco (mesmo padrao de nomes de apps.clinics.models.Clinic)
+    address = models.CharField("logradouro", max_length=180, blank=True)
+    address_number = models.CharField("numero", max_length=20, blank=True)
+    address_complement = models.CharField("complemento", max_length=80, blank=True)
+    district = models.CharField("bairro", max_length=100, blank=True)
+    city = models.CharField("cidade", max_length=100, blank=True)
+    state = models.CharField("estado", max_length=2, blank=True)
+    postal_code = models.CharField("CEP", max_length=9, blank=True, validators=[validate_cep])
 
     council = models.CharField("conselho", max_length=20, choices=COUNCIL_CHOICES, blank=True)
     registry_number = models.CharField("registro profissional", max_length=40, blank=True)

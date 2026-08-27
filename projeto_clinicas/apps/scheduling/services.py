@@ -271,6 +271,8 @@ def change_status(
         appointment.confirmed_at = now
     elif new_status == Appointment.Status.CHECKED_IN:
         appointment.checked_in_at = now
+    elif new_status == Appointment.Status.CALLED:
+        appointment.called_at = now
     elif new_status == Appointment.Status.IN_PROGRESS:
         appointment.started_at = now
     elif new_status == Appointment.Status.COMPLETED:

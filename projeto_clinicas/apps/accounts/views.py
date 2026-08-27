@@ -1,8 +1,6 @@
 """Views de autenticacao, seguranca da conta e gestao de usuarios da clinica."""
 from __future__ import annotations
 
-import secrets
-
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
@@ -43,6 +41,7 @@ from apps.accounts.middleware import MFA_VERIFIED_KEY
 from apps.accounts.models import ApiToken, Role, User, UserSession
 from apps.accounts.permissions import Roles, permissions_by_group
 from apps.accounts.services import (
+    DEFAULT_INITIAL_PASSWORD,
     admin_set_password,
     create_api_token,
     record_attempt,
@@ -407,7 +406,7 @@ class ClinicUserCreateView(ClinicViewMixin, CreateView):
             user = form.save(commit=False)
             user.email = email
             user.role = form.cleaned_data["role"]
-            provisional_password = secrets.token_urlsafe(10)
+            provisional_password = DEFAULT_INITIAL_PASSWORD
             user.set_password(provisional_password)
             user.must_change_password = True
             user.save()

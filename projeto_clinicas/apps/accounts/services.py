@@ -16,6 +16,12 @@ from apps.audit.services import log_action
 
 ATTEMPT_CACHE_PREFIX = "jja:login-attempts:"
 
+#: Senha temporaria atribuida a todo usuario novo -- sempre acompanhada de
+#: ``must_change_password=True``, que bloqueia o acesso ao sistema (ver
+#: ``apps.accounts.middleware.SessionSecurityMiddleware``) ate a troca no
+#: primeiro login.
+DEFAULT_INITIAL_PASSWORD = "12345"
+
 
 # ---------------------------------------------------------------------------
 # Protecao contra forca bruta

@@ -37,11 +37,10 @@
     <div class="dropdown">
       <button class="btn btn-light position-relative" data-bs-toggle="dropdown" aria-label="Notificacoes">
         <i class="bi bi-bell"></i>
-        {% if unread_notifications %}
-          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-            {{ unread_notifications }}
-          </span>
-        {% endif %}
+        <span id="jjaUnreadBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              {% if not unread_notifications %}style="display:none"{% endif %}>
+          {{ unread_notifications|default:0 }}
+        </span>
       </button>
       <ul class="dropdown-menu dropdown-menu-end jja-notifications">
         <li><h6 class="dropdown-header">Notificacoes</h6></li>
@@ -88,3 +87,24 @@
     </div>
   </div>
 </header>
+<script>
+  // Atualiza o contador do sino periodicamente sem exigir recarregar a
+  // pagina inteira -- o endpoint ja existia (apps.notifications.views),
+  // so faltava ser consumido pelo frontend.
+  (function () {
+    "use strict";
+    var badge = document.getElementById("jjaUnreadBadge");
+    if (!badge) return;
+    function refresh() {
+      fetch("{% url 'notifications:unread-count' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          var count = data.unread || 0;
+          badge.textContent = count;
+          badge.style.display = count > 0 ? "" : "none";
+        })
+        .catch(function () {});
+    }
+    setInterval(refresh, 30000);
+  })();
+</script>

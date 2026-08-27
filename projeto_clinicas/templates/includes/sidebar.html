@@ -89,6 +89,16 @@ e apenas conveniencia visual -- a autorizacao real acontece no backend.
       {% endif %}
     {% endif %}
 
+    {% if perms_clinic.inventory_view and active_clinic.has_module_inventory %}
+      <div class="jja-nav-group">Estoque</div>
+      <a href="{% url 'inventory:product-list' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'inventory' and request.resolver_match.url_name == 'product-list' %}active{% endif %}">
+        <i class="bi bi-box-seam"></i> Produtos
+      </a>
+      <a href="{% url 'inventory:movement-list' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'movement-list' %}active{% endif %}">
+        <i class="bi bi-arrow-left-right"></i> Movimentacoes
+      </a>
+    {% endif %}
+
     {% if perms_clinic.automation_view and active_clinic.has_module_automation %}
       <div class="jja-nav-group">Automacao</div>
       <a href="{% url 'automation:settings' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'automation' and request.resolver_match.url_name == 'settings' %}active{% endif %}">

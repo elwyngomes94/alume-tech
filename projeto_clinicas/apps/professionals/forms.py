@@ -1,13 +1,13 @@
 """Formularios de profissionais."""
 from __future__ import annotations
 
-import secrets
-
 from django import forms
+from django.db import transaction
 
 from apps.accounts.forms import BootstrapFormMixin
 from apps.accounts.models import User
 from apps.accounts.permissions import Roles
+from apps.accounts.services import DEFAULT_INITIAL_PASSWORD
 from apps.clinics.models import Room, Service, Specialty
 from apps.professionals.models import Professional
 from apps.tenants.models import ClinicMembership
@@ -31,6 +31,13 @@ class ProfessionalForm(BootstrapFormMixin, forms.ModelForm):
             "email",
             "phone",
             "photo",
+            "postal_code",
+            "address",
+            "address_number",
+            "address_complement",
+            "district",
+            "city",
+            "state",
             "council",
             "registry_number",
             "registry_state",
@@ -71,15 +78,16 @@ class ProfessionalForm(BootstrapFormMixin, forms.ModelForm):
             self.add_error("email", "Informe o e-mail para criar o acesso ao sistema.")
         return cleaned
 
+    @transaction.atomic
     def ensure_user_access(self, professional: Professional):
-        """Cria (se necessario) o usuario e o vinculo do profissional."""
+        """Cria (se necessario) o usuario e o vinculo do profissional -- atomico."""
         if not self.cleaned_data.get("create_access") or professional.user_id:
             return None
         email = self.cleaned_data["email"].lower()
         user = User.objects.filter(email__iexact=email).first()
         provisional = None
         if user is None:
-            provisional = secrets.token_urlsafe(10)
+            provisional = DEFAULT_INITIAL_PASSWORD
             user = User.objects.create_user(
                 email=email,
                 password=provisional,

@@ -57,6 +57,7 @@ MODULE_CATALOG: Dict[str, tuple] = {
     "billing": ("Faturamento", "Plano, faturas e limites"),
     "finance": ("Financeiro", "Contas a receber, contas a pagar e fluxo de caixa"),
     "automation": ("Automacao", "Lista de espera automatica, baixa por webhook e comprovantes"),
+    "inventory": ("Estoque", "Produtos, entradas/saidas e controle de estoque minimo"),
 }
 
 #: Modulos ativos por padrao em qualquer clinica.

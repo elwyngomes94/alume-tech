@@ -28,6 +28,7 @@ class AuditAction(models.TextChoices):
     DOWNLOAD = "download", "Download de documento"
     UPLOAD = "upload", "Upload de documento"
     EXPORT = "export", "Exportacao de dados"
+    PRINT = "print", "Impressao"
     PERMISSION_CHANGE = "permission_change", "Alteracao de permissoes"
     SETTINGS_CHANGE = "settings_change", "Alteracao de configuracoes"
     ACCESS_DENIED = "access_denied", "Acesso negado"

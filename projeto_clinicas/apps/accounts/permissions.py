@@ -109,6 +109,9 @@ PERMISSION_CATALOG: List[tuple] = [
     # Automacao
     ("automation.view", "Visualizar configuracoes e historico de automacoes", "Automacao"),
     ("automation.manage", "Ativar/desativar automacoes e gerenciar o webhook", "Automacao"),
+    # Estoque
+    ("inventory.view", "Visualizar produtos e movimentacoes de estoque", "Estoque"),
+    ("inventory.manage", "Cadastrar produtos e lancar entradas/saidas de estoque", "Estoque"),
 ]
 
 ALL_PERMISSIONS: Set[str] = {codename for codename, _label, _group in PERMISSION_CATALOG}

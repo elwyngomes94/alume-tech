@@ -35,16 +35,102 @@
   {% endif %}
 </div>
 
+{% if in_progress_now %}
+  <div class="row g-3 mb-3">
+    {% for appointment in in_progress_now %}
+      <div class="col-12">
+        <div class="card border-success">
+          <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <div class="badge text-bg-success mb-1">PACIENTE EM ATENDIMENTO</div>
+              <div class="fs-5 fw-semibold">{{ appointment.patient.display_name }}</div>
+              <div class="text-body-secondary small">
+                {{ appointment.professional.display_name }} &middot;
+                iniciado as {{ appointment.started_at|time:"H:i" }}
+              </div>
+            </div>
+            {% if can_change %}
+              <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'completed' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="btn btn-success" type="submit">Finalizar</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
 <div class="row g-3">
   <div class="col-lg-8">
-    <div class="card">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header">Aguardando <span class="badge text-bg-secondary">{{ waiting_now|length }}</span></div>
+          <ul class="list-group list-group-flush">
+            {% for appointment in waiting_now %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div>{{ appointment.patient.display_name }}</div>
+                    <div class="text-body-secondary small">{{ appointment.professional.display_name }}</div>
+                  </div>
+                  <span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span>
+                </div>
+                {% if can_change %}
+                  <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'called' %}" class="mt-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="btn btn-sm btn-primary w-100" type="submit">Chamar</button>
+                  </form>
+                {% endif %}
+              </li>
+            {% empty %}
+              <li class="list-group-item text-body-secondary">Ninguem aguardando no momento.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header">Chamado <span class="badge text-bg-secondary">{{ called_now|length }}</span></div>
+          <ul class="list-group list-group-flush">
+            {% for appointment in called_now %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div>{{ appointment.patient.display_name }}</div>
+                    <div class="text-body-secondary small">{{ appointment.professional.display_name }}</div>
+                  </div>
+                  <span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span>
+                </div>
+                {% if can_change %}
+                  <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'in_progress' %}" class="mt-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="btn btn-sm btn-warning w-100" type="submit">Iniciar atendimento</button>
+                  </form>
+                {% endif %}
+              </li>
+            {% empty %}
+              <li class="list-group-item text-body-secondary">Ninguem chamado no momento.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
       <div class="card-header d-flex justify-content-between">
         <span>Agenda de hoje</span>
         <a class="small" href="{% url 'scheduling:agenda-day' %}">Ver agenda completa</a>
       </div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead><tr><th>Hora</th><th>Paciente</th><th>Profissional</th><th>Status</th><th>Pagamento</th><th></th></tr></thead>
+          <thead><tr><th>Hora</th><th>Paciente</th><th>Profissional</th><th>Status</th><th>Aviso</th><th>Pagamento</th><th></th></tr></thead>
           <tbody>
             {% for appointment in today_appointments %}
               <tr>
@@ -52,6 +138,9 @@
                 <td>{{ appointment.patient.display_name }}</td>
                 <td class="small">{{ appointment.professional.display_name }}</td>
                 <td><span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span></td>
+                <td class="small {% if 'Atrasado' in appointment.time_label %}text-danger{% else %}text-body-secondary{% endif %}">
+                  {{ appointment.time_label }}
+                </td>
                 <td>
                   {% if appointment.payment_badge %}
                     <span class="badge text-bg-{{ appointment.payment_badge.css }}">
@@ -66,7 +155,7 @@
                 </td>
               </tr>
             {% empty %}
-              <tr><td colspan="6" class="text-body-secondary">Sem atendimentos hoje.</td></tr>
+              <tr><td colspan="7" class="text-body-secondary">Sem atendimentos hoje.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -75,20 +164,6 @@
   </div>
 
   <div class="col-lg-4">
-    <div class="card mb-3">
-      <div class="card-header">Aguardando atendimento</div>
-      <ul class="list-group list-group-flush">
-        {% for appointment in waiting_now %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <span>{{ appointment.patient.display_name }}</span>
-            <a class="btn btn-sm btn-outline-secondary" href="{% url 'scheduling:appointment-detail' appointment.pk %}">Ver</a>
-          </li>
-        {% empty %}
-          <li class="list-group-item text-body-secondary">Ninguem aguardando no momento.</li>
-        {% endfor %}
-      </ul>
-    </div>
-
     {% if can_manage_payment %}
       <div class="card">
         <div class="card-header">Financeiro</div>
@@ -101,4 +176,14 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Painel da recepcao precisa refletir a fila em tempo real -- sem
+  // infraestrutura de websockets no projeto, um recarregamento simples a
+  // cada 30s e suficiente e nao interrompe o preenchimento de formularios
+  // (o timer e sempre reiniciado a cada carregamento da pagina).
+  setTimeout(function () { window.location.reload(); }, 30000);
+</script>
 {% endblock %}

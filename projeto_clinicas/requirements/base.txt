@@ -9,3 +9,4 @@ whitenoise>=6.7
 celery>=5.4
 redis>=5.0
 gunicorn>=22.0
+requests>=2.32

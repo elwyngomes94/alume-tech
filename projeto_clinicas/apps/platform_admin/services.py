@@ -1,7 +1,6 @@
 """Servicos do painel da plataforma (SUPERADMIN)."""
 from __future__ import annotations
 
-import secrets
 from datetime import timedelta
 from typing import Tuple
 
@@ -10,6 +9,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.accounts.permissions import Roles
+from apps.accounts.services import DEFAULT_INITIAL_PASSWORD
 from apps.clinics.models import Clinic, ClinicSettings
 from apps.core.tenancy import tenant_context
 from apps.tenants.models import ClinicMembership
@@ -98,7 +98,7 @@ def provision_clinic(clinic: Clinic, *, admin_email: str = "", admin_name: str =
     if admin_email:
         user = User.objects.filter(email__iexact=admin_email).first()
         if user is None:
-            provisional_password = secrets.token_urlsafe(10)
+            provisional_password = DEFAULT_INITIAL_PASSWORD
             user = User.objects.create_user(
                 email=admin_email.lower(),
                 password=provisional_password,

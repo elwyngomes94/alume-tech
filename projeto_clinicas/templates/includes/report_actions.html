@@ -6,10 +6,12 @@ Uso:
     {% include "includes/report_actions.html" with pdf_url=... excel_url=... print_url=... whatsapp_text=... %}
 
 Parametros (todos opcionais -- o botao so aparece se a URL for informada):
-    pdf_url        URL de exportacao em PDF
-    excel_url      URL de exportacao em Excel
-    print_url      URL para impressao (se vazio, usa a pagina atual)
-    whatsapp_text  Mensagem padrao sugerida no compartilhamento
+    pdf_url         URL de exportacao em PDF
+    excel_url       URL de exportacao em Excel
+    print_url       URL para impressao (se vazio, usa a pagina atual)
+    print_ack_url   URL (POST) chamada via fetch() antes de imprimir, so
+                     para registrar a auditoria de impressao (ex.: prontuario)
+    whatsapp_text   Mensagem padrao sugerida no compartilhamento
 {% endcomment %}
 <div class="btn-group flex-wrap" role="group">
   {% if pdf_url %}
@@ -22,10 +24,17 @@ Parametros (todos opcionais -- o botao so aparece se a URL for informada):
       <span aria-hidden="true">📊</span> Excel
     </a>
   {% endif %}
-  <a class="btn btn-outline-secondary btn-sm no-print" href="{{ print_url|default:request.get_full_path }}"
-     onclick="window.print(); return false;">
-    <span aria-hidden="true">🖨️</span> Imprimir
-  </a>
+  {% if print_ack_url %}
+    <a class="btn btn-outline-secondary btn-sm no-print" href="{{ print_url|default:request.get_full_path }}"
+       onclick="fetch('{{ print_ack_url }}', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}}).finally(function () { window.print(); }); return false;">
+      <span aria-hidden="true">🖨️</span> Imprimir
+    </a>
+  {% else %}
+    <a class="btn btn-outline-secondary btn-sm no-print" href="{{ print_url|default:request.get_full_path }}"
+       onclick="window.print(); return false;">
+      <span aria-hidden="true">🖨️</span> Imprimir
+    </a>
+  {% endif %}
   <button type="button" class="btn btn-outline-success btn-sm no-print" data-bs-toggle="modal"
           data-bs-target="#reportShareModal">
     <span aria-hidden="true">📱</span> WhatsApp

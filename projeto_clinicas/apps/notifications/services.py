@@ -74,6 +74,7 @@ EVENT_TITLES = {
     "rescheduled": ("Agendamento remarcado", NotificationEvent.APPOINTMENT_RESCHEDULED, "warning"),
     "canceled": ("Agendamento cancelado", NotificationEvent.APPOINTMENT_CANCELED, "danger"),
     "confirmed": ("Agendamento confirmado", NotificationEvent.APPOINTMENT_CONFIRMED, "success"),
+    "called": ("Paciente chamado", NotificationEvent.APPOINTMENT_CALLED, "info"),
 }
 
 

@@ -45,6 +45,8 @@ AUDITED_MODELS = {
     "finance.FinancialCategory",
     "finance.CostCenter",
     "finance.PaymentMethod",
+    "inventory.Product",
+    "inventory.StockMovement",
 }
 
 #: Campos ignorados na comparacao (ruido ou segredo).

@@ -1,10 +1,16 @@
-"""Views utilitarias: redirecionamento inicial, health check e erros."""
+"""Views utilitarias: redirecionamento inicial, health check, CEP e erros."""
 from __future__ import annotations
 
+import requests
+from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
+
+from apps.core.validators import digits
+
+VIACEP_URL = "https://viacep.com.br/ws/{cep}/json/"
 
 
 class RootRedirectView(View):
@@ -33,6 +39,40 @@ def health_check(request):
     status = 200 if database_ok else 503
     return JsonResponse({"status": "ok" if database_ok else "degraded", "database": database_ok},
                         status=status)
+
+
+@login_required
+def cep_lookup(request, cep):
+    """
+    Proxy do ViaCEP: evita CORS no navegador e mantem a chamada externa sob
+    controle do servidor (testavel via mock). Retorna campos normalizados
+    (``street``/``district``/``city``/``state``) para funcionar com
+    qualquer formulario, independente do nome dos campos de endereco.
+    """
+    clean = digits(cep)
+    if len(clean) != 8:
+        return JsonResponse({"detail": "CEP invalido. Utilize o formato 00000-000."}, status=400)
+    try:
+        response = requests.get(VIACEP_URL.format(cep=clean), timeout=5)
+        response.raise_for_status()
+        data = response.json()
+    except (requests.RequestException, ValueError):
+        return JsonResponse(
+            {"detail": "Nao foi possivel consultar o CEP. Preencha o endereco manualmente."},
+            status=503,
+        )
+    if data.get("erro"):
+        return JsonResponse(
+            {"detail": "CEP nao encontrado. Verifique o numero informado."}, status=404
+        )
+    return JsonResponse(
+        {
+            "street": data.get("logradouro", ""),
+            "district": data.get("bairro", ""),
+            "city": data.get("localidade", ""),
+            "state": data.get("uf", ""),
+        }
+    )
 
 
 def handler403(request, exception=None):

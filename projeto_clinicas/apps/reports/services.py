@@ -621,6 +621,67 @@ def refunds_report(start: date, end: date) -> Tuple[List[str], List[List]]:
     return headers, rows
 
 
+def stock_products_report(start: date, end: date) -> Tuple[List[str], List[List]]:
+    """Snapshot atual do estoque -- ignora o periodo (nao ha "estoque no passado")."""
+    from apps.inventory.models import Product
+
+    headers = ["Produto", "SKU", "Categoria", "Estoque atual", "Estoque minimo", "Status"]
+    rows = [
+        [
+            product.name,
+            product.sku or "-",
+            product.category or "-",
+            f"{product.current_stock} {product.unit}",
+            f"{product.minimum_stock} {product.unit}",
+            "Abaixo do minimo" if product.is_below_minimum else "OK",
+        ]
+        for product in Product.objects.all().order_by("name")
+    ]
+    return headers, rows
+
+
+def stock_low_report(start: date, end: date) -> Tuple[List[str], List[List]]:
+    """Produtos com saldo abaixo do minimo -- tambem ignora o periodo."""
+    from django.db.models import F
+
+    from apps.inventory.models import Product
+
+    headers = ["Produto", "SKU", "Estoque atual", "Estoque minimo", "Faltam"]
+    rows = [
+        [
+            product.name,
+            product.sku or "-",
+            f"{product.current_stock} {product.unit}",
+            f"{product.minimum_stock} {product.unit}",
+            f"{product.minimum_stock - product.current_stock} {product.unit}",
+        ]
+        for product in Product.objects.filter(is_active=True, current_stock__lt=F("minimum_stock"))
+        .order_by("name")
+    ]
+    return headers, rows
+
+
+def stock_movements_report(start: date, end: date) -> Tuple[List[str], List[List]]:
+    from apps.inventory.models import StockMovement
+
+    queryset = StockMovement.objects.filter(
+        moved_at__date__gte=start, moved_at__date__lte=end
+    ).select_related("product", "created_by")
+    headers = ["Data", "Produto", "Tipo", "Quantidade", "Motivo", "Registrado por"]
+    rows = [
+        [
+            timezone.localtime(movement.moved_at).strftime("%d/%m/%Y %H:%M"),
+            movement.product.name,
+            movement.get_kind_display(),
+            f"{movement.quantity} {movement.product.unit}",
+            movement.reason or "-",
+            movement.created_by.full_name if movement.created_by_id else "-",
+        ]
+        for movement in queryset.order_by("-moved_at")
+    ]
+    return headers, rows
+
+
 #: Relatorios financeiros exigem a permissao 'finance.report.view' alem de
 #: 'report.view'/'report.export' -- ver apps.reports.views.
 FINANCE_REPORT_KEYS = {
@@ -659,6 +720,9 @@ REPORTS = {
     "pagamentos_recepcionista": ("Pagamentos por recepcionista", payments_by_receptionist_report),
     "pagamentos_parciais": ("Pagamentos parciais", partial_payments_report),
     "estornos": ("Estornos", refunds_report),
+    "estoque_produtos": ("Estoque - produtos", stock_products_report),
+    "estoque_baixo": ("Estoque - abaixo do minimo", stock_low_report),
+    "estoque_movimentacoes": ("Estoque - movimentacoes", stock_movements_report),
 }
 
 

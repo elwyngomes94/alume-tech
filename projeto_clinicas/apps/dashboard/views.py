@@ -101,6 +101,9 @@ class ClinicDashboardView(ClinicViewMixin, TemplateView):
                     status=Appointment.Status.CANCELED
                 ).count(),
                 "period_no_show": appointments.filter(status=Appointment.Status.NO_SHOW).count(),
+                "in_progress_count": Appointment.objects.filter(
+                    start_at__date=today, status=Appointment.Status.IN_PROGRESS
+                ).count(),
                 "pending_exams": ExaminationRequest.objects.filter(
                     status=ExaminationRequest.Status.REQUESTED
                 ).count(),
@@ -124,9 +127,28 @@ class ClinicDashboardView(ClinicViewMixin, TemplateView):
         if self.request.clinic.has_module_finance and self.request.user.has_clinic_perm(
             "finance.view", self.request.clinic
         ):
+            from apps.finance.models import FinancialTransaction
             from apps.finance.services import dashboard_summary
 
             context["finance_summary"] = dashboard_summary(self.request.clinic, start, end)
+            context["revenue_today"] = dashboard_summary(self.request.clinic, today, today)[
+                "period_income"
+            ]
+
+            by_method = (
+                FinancialTransaction.objects.filter(
+                    kind=FinancialTransaction.Kind.INCOME,
+                    paid_at__date__gte=start,
+                    paid_at__date__lte=end,
+                )
+                .values("method__name")
+                .annotate(total=Count("id"))
+                .order_by("-total")
+            )
+            context["chart_method_labels"] = [
+                item["method__name"] or "Nao informado" for item in by_method
+            ]
+            context["chart_method_values"] = [item["total"] for item in by_method]
         return context
 
 
@@ -209,19 +231,52 @@ class ReceptionDashboardView(ClinicViewMixin, TemplateView):
     template_name = "dashboard/reception.html"
     required_permission = "appointment.view"
 
+    #: status que ainda antecedem o atendimento -- usados para calcular o
+    #: rotulo "Proximo em N min" / "Atrasado N min" de cada linha da fila.
+    _ACTIVE_STATUSES = {
+        Appointment.Status.SCHEDULED,
+        Appointment.Status.CONFIRMED,
+        Appointment.Status.CHECKED_IN,
+        Appointment.Status.CALLED,
+    }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from apps.scheduling.services import agenda_summary
 
         today = timezone.localdate()
-        today_appointments = (
+        today_appointments = list(
             Appointment.objects.filter(start_at__date=today)
             .select_related("patient", "professional", "service")
             .order_by("start_at")
         )
+        now = timezone.now()
+        for appointment in today_appointments:
+            if appointment.status not in self._ACTIVE_STATUSES:
+                appointment.time_label = ""
+                continue
+            delta_minutes = int((appointment.start_at - now).total_seconds() // 60)
+            if delta_minutes > 0:
+                appointment.time_label = f"Proximo em {delta_minutes} min"
+            elif delta_minutes < 0:
+                appointment.time_label = f"Atrasado {abs(delta_minutes)} min"
+            else:
+                appointment.time_label = "Agora"
+
         context["today_summary"] = agenda_summary(self.request.clinic, today)
         context["today_appointments"] = today_appointments
-        context["waiting_now"] = today_appointments.filter(status=Appointment.Status.CHECKED_IN)
+        context["waiting_now"] = [
+            a for a in today_appointments if a.status == Appointment.Status.CHECKED_IN
+        ]
+        context["called_now"] = [
+            a for a in today_appointments if a.status == Appointment.Status.CALLED
+        ]
+        context["in_progress_now"] = [
+            a for a in today_appointments if a.status == Appointment.Status.IN_PROGRESS
+        ]
+        context["can_change"] = self.request.user.has_clinic_perm(
+            "appointment.change", self.request.clinic
+        )
 
         context["can_manage_payment"] = (
             self.request.clinic.has_module_finance

@@ -1,0 +1,21 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{% if kind == 'entry' %}Entrada de estoque{% else %}Saida de estoque{% endif %}{% endblock %}
+{% block page_subtitle %}{{ product.name }} &middot; saldo atual: {{ product.current_stock }} {{ product.unit }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-{% if kind == 'entry' %}success{% else %}danger{% endif %}" type="submit">
+          Registrar {% if kind == 'entry' %}entrada{% else %}saida{% endif %}
+        </button>
+        <a class="btn btn-light" href="{% url 'inventory:product-list' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -130,4 +130,4 @@ class ReportExportView(ClinicViewMixin, View):
         subtitle = (
             f"{request.clinic} | Periodo: {start:%d/%m/%Y} a {end:%d/%m/%Y}"
         )
-        return export(fmt, filename, headers, rows, title=label, subtitle=subtitle)
+        return export(fmt, filename, headers, rows, title=label, subtitle=subtitle, clinic=request.clinic)

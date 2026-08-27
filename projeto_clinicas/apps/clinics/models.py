@@ -146,6 +146,11 @@ class Clinic(BaseModel):
         """Atalho para templates, mesmo motivo de ``has_module_finance``."""
         return self.has_module("automation")
 
+    @property
+    def has_module_inventory(self) -> bool:
+        """Atalho para templates, mesmo motivo de ``has_module_finance``."""
+        return self.has_module("inventory")
+
     def get_absolute_url(self) -> str:
         return reverse("platform:clinic-detail", args=[self.pk])
 

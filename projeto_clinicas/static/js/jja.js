@@ -81,14 +81,70 @@ window.JJA.shareOnWhatsApp = function (text) {
     cep: function (v) { return v.slice(0, 8).replace(/(\d{5})(\d)/, "$1-$2"); }
   };
 
-  document.querySelectorAll("input[name='cpf'], input[name='guardian_document'], input[name='responsible_document']")
+  // Selecionar por sufixo do nome (`$=`), nao por igualdade: campos dentro
+  // de um formset (ex.: enderecos/contatos do paciente) sao renderizados
+  // com um prefixo por linha (ex.: "addresses-0-postal_code"), entao um
+  // seletor de igualdade exata nunca casaria com eles.
+  document.querySelectorAll("input[name$='cpf'], input[name$='guardian_document'], input[name$='responsible_document']")
     .forEach(function (input) { applyMask(input, formatters.cpf); });
   document.querySelectorAll("input[name='document']")
     .forEach(function (input) { applyMask(input, formatters.documento); });
-  document.querySelectorAll("input[name='phone'], input[name='mobile'], input[name='whatsapp'], input[name='guardian_phone']")
+  document.querySelectorAll("input[name$='phone'], input[name$='mobile'], input[name$='whatsapp']")
     .forEach(function (input) { applyMask(input, formatters.telefone); });
-  document.querySelectorAll("input[name='postal_code']")
+  document.querySelectorAll("input[name$='postal_code']")
     .forEach(function (input) { applyMask(input, formatters.cep); });
+
+  // --- preenchimento automatico de endereco pelo CEP (ViaCEP) -------------
+  // Os nomes dos campos de destino nao sao padronizados entre os
+  // formularios (Clinic/Professional usam "address", PatientAddress usa
+  // "street"), entao procura por qualquer um dos dois. Usa o mesmo prefixo
+  // do campo de CEP (extraido do proprio "name") para achar os campos
+  // irmaos corretos mesmo dentro de uma linha de formset repetida.
+  document.querySelectorAll("input[name$='postal_code']").forEach(function (input) {
+    const prefix = input.name.slice(0, input.name.length - "postal_code".length);
+    function sibling(fieldName) {
+      return document.querySelector("[name='" + prefix + fieldName + "']");
+    }
+    const streetField = sibling("street") || sibling("address");
+    const districtField = sibling("district");
+    const cityField = sibling("city");
+    const stateField = sibling("state");
+    if (!streetField && !districtField && !cityField && !stateField) return;
+
+    const feedback = document.createElement("div");
+    feedback.className = "form-text";
+    input.insertAdjacentElement("afterend", feedback);
+
+    input.addEventListener("blur", function () {
+      const cep = onlyDigits(input.value);
+      if (cep.length !== 8) { feedback.textContent = ""; return; }
+      feedback.textContent = "Consultando CEP...";
+      feedback.className = "form-text text-body-secondary";
+      fetch("/app/cep/" + cep + "/", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            return { ok: response.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) {
+            feedback.textContent = result.data.detail || "Nao foi possivel consultar o CEP.";
+            feedback.className = "form-text text-danger";
+            return;
+          }
+          if (streetField && result.data.street) streetField.value = result.data.street;
+          if (districtField && result.data.district) districtField.value = result.data.district;
+          if (cityField && result.data.city) cityField.value = result.data.city;
+          if (stateField && result.data.state) stateField.value = result.data.state;
+          feedback.textContent = "Endereco preenchido automaticamente (edite se necessario).";
+          feedback.className = "form-text text-success";
+        })
+        .catch(function () {
+          feedback.textContent = "Nao foi possivel consultar o CEP. Preencha o endereco manualmente.";
+          feedback.className = "form-text text-danger";
+        });
+    });
+  });
 
   // --- carregamento de horarios livres na tela de agendamento -------------
   const slotsBox = document.getElementById("jjaSlots");

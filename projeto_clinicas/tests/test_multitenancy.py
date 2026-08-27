@@ -128,6 +128,33 @@ class HttpIsolationTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class MedicalRecordCrossTenantTests(TestCase):
+    """
+    Repete o cenario de seguranca do pedido: um usuario da clinica 2 tentando
+    abrir o prontuario de um paciente da clinica 1 (ex.: um id de paciente
+    obtido/adivinhado de outra clinica) deve receber 404, nunca 403 com
+    vazamento de dado nem 200 com o prontuario de outra clinica.
+    """
+
+    def setUp(self):
+        self.clinic_1 = make_clinic(trade_name="Clinica 1")
+        self.clinic_2 = make_clinic(trade_name="Clinica 2")
+        self.admin_2 = make_admin(self.clinic_2)
+        self.patient_1 = make_patient(self.clinic_1, full_name="Paciente da Clinica 1")
+
+    def test_usuario_da_clinica_2_nao_abre_prontuario_de_paciente_da_clinica_1(self):
+        client = Client()
+        client.force_login(self.admin_2)
+        response = client.get(reverse("medical_records:record-detail", args=[self.patient_1.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_usuario_da_clinica_2_nao_exporta_pdf_de_prontuario_de_outra_clinica(self):
+        client = Client()
+        client.force_login(self.admin_2)
+        response = client.get(reverse("medical_records:record-pdf", args=[self.patient_1.pk]))
+        self.assertEqual(response.status_code, 404)
+
+
 class ProfessionalRecordAccessTests(TestCase):
     """
     Profissional so acessa prontuario de paciente com vinculo assistencial
