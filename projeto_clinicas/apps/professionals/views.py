@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
@@ -11,6 +12,31 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from apps.core.mixins import ClinicViewMixin
 from apps.professionals.forms import ProfessionalForm
 from apps.professionals.models import Professional
+
+
+class ProfessionalSearchView(ClinicViewMixin, View):
+    """Autocomplete de profissionais usado na agenda (busca por nome/especialidade)."""
+
+    required_permission = "professional.view"
+
+    def get(self, request):
+        term = request.GET.get("q", "").strip()
+        queryset = Professional.objects.filter(is_active=True).prefetch_related("specialties")
+        if len(term) >= 2:
+            queryset = queryset.filter(
+                Q(full_name__icontains=term)
+                | Q(social_name__icontains=term)
+                | Q(specialties__name__icontains=term)
+            ).distinct()
+        results = [
+            {
+                "id": str(professional.pk),
+                "text": professional.display_name,
+                "detail": professional.specialty_names or "-",
+            }
+            for professional in queryset.order_by("full_name")[:12]
+        ]
+        return JsonResponse({"results": results})
 
 
 class ProfessionalListView(ClinicViewMixin, ListView):

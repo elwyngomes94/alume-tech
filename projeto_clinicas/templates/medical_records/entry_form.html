@@ -4,8 +4,15 @@
 {% block page_subtitle %}{% if template_obj %}Modelo: {{ template_obj.name }}{% endif %}{% endblock %}
 
 {% block content %}
+{% if appointment %}
+  <div class="alert alert-info">
+    Atendimento vinculado ao agendamento de
+    {{ appointment.start_at|date:"d/m/Y H:i" }} com {{ appointment.professional.display_name }}.
+  </div>
+{% endif %}
 <form method="post" novalidate>
   {% csrf_token %}
+  {% if appointment %}<input type="hidden" name="appointment" value="{{ appointment.pk }}">{% endif %}
 
   <div class="card mb-3">
     <div class="card-header">Dados do atendimento</div>

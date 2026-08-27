@@ -24,7 +24,26 @@
     </select>
   </div>
   <div class="col-md-3"><input class="form-control" type="search" name="q" placeholder="Paciente" value="{{ request.GET.q|default:'' }}"></div>
-  <div class="col-12"><button class="btn btn-outline-primary btn-sm">Filtrar</button></div>
+  <div class="col-md-3">
+    <select class="form-select" name="service">
+      <option value="">Todos os servicos</option>
+      {% for item in services %}
+        <option value="{{ item.pk }}" {% if request.GET.service == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="room">
+      <option value="">Todas as salas</option>
+      {% for item in rooms %}
+        <option value="{{ item.pk }}" {% if request.GET.room == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm">Filtrar</button>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scheduling:agenda-list' %}">Limpar filtros</a>
+  </div>
 </form>
 
 <div class="card">

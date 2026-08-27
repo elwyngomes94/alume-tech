@@ -146,6 +146,80 @@ window.JJA.shareOnWhatsApp = function (text) {
     });
   });
 
+  // --- busca inteligente (paciente/profissional no agendamento) -----------
+  // Contrato via atributos data-*, sem depender de nenhuma biblioteca:
+  //   data-autocomplete-url    endpoint JSON ({"results": [{id, text, detail}]})
+  //   data-autocomplete-target id do <input type="hidden"> com o valor real
+  document.querySelectorAll("input[data-autocomplete-url]").forEach(function (input) {
+    const hidden = document.getElementById(input.dataset.autocompleteTarget);
+    if (!hidden) return;
+
+    const box = document.createElement("div");
+    box.className = "jja-autocomplete-results";
+    input.insertAdjacentElement("afterend", box);
+    input.setAttribute("autocomplete", "off");
+
+    let timer = null;
+
+    function hide() { box.classList.remove("show"); box.innerHTML = ""; }
+
+    function renderResults(items) {
+      if (!items.length) {
+        box.innerHTML = '<div class="jja-autocomplete-empty">Nenhum resultado encontrado.</div>';
+      } else {
+        box.innerHTML = items.map(function (item) {
+          return '<button type="button" class="jja-autocomplete-item" data-id="' + item.id +
+                 '" data-text="' + item.text.replace(/"/g, "&quot;") + '">' +
+                 '<strong>' + item.text + '</strong>' +
+                 (item.detail ? '<small>' + item.detail + '</small>' : "") +
+                 "</button>";
+        }).join("");
+      }
+      box.classList.add("show");
+    }
+
+    function search(term) {
+      fetch(input.dataset.autocompleteUrl + "?q=" + encodeURIComponent(term), {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (data) { renderResults(data.results || []); })
+        .catch(function () {
+          box.innerHTML = '<div class="jja-autocomplete-empty">Nao foi possivel buscar agora.</div>';
+          box.classList.add("show");
+        });
+    }
+
+    input.addEventListener("input", function () {
+      if (hidden.value) {
+        hidden.value = "";
+        hidden.dispatchEvent(new Event("change"));
+      }
+      const term = input.value.trim();
+      clearTimeout(timer);
+      if (term.length < 2) { hide(); return; }
+      timer = setTimeout(function () { search(term); }, 250);
+    });
+
+    input.addEventListener("focus", function () {
+      const term = input.value.trim();
+      if (term.length >= 2 && !hidden.value) search(term);
+    });
+
+    box.addEventListener("mousedown", function (event) {
+      const item = event.target.closest(".jja-autocomplete-item");
+      if (!item) return;
+      hidden.value = item.dataset.id;
+      input.value = item.dataset.text;
+      hide();
+      hidden.dispatchEvent(new Event("change"));
+    });
+
+    document.addEventListener("click", function (event) {
+      if (event.target !== input && !box.contains(event.target)) hide();
+    });
+  });
+
   // --- carregamento de horarios livres na tela de agendamento -------------
   const slotsBox = document.getElementById("jjaSlots");
   if (slotsBox) {
@@ -177,9 +251,14 @@ window.JJA.shareOnWhatsApp = function (text) {
           }
           slotsBox.innerHTML = data.slots.map(function (slot) {
             const cls = slot.available ? "btn-outline-primary" : "btn-outline-secondary disabled";
-            const title = slot.available ? "Horario livre" : slot.reason;
-            return '<button type="button" class="btn btn-sm ' + cls + ' m-1 jja-slot-btn" ' +
-                   'data-time="' + slot.start + '" title="' + title + '">' + slot.start + "</button>";
+            // O rotulo de disponibilidade fica sempre visivel (nao so no
+            // title/tooltip) -- em celular/tablet nao ha hover.
+            const label = slot.available ? "Disponivel" : (slot.reason || "Ocupado");
+            return '<button type="button" class="btn btn-sm ' + cls + ' m-1 jja-slot-btn d-flex flex-column align-items-center lh-sm py-1" ' +
+                   'data-time="' + slot.start + '" title="' + label + '">' +
+                   '<span class="fw-semibold">' + slot.start + '</span>' +
+                   '<span class="jja-slot-label" style="font-size:.7rem;">' + label + '</span>' +
+                   '</button>';
           }).join("");
           slotsBox.querySelectorAll(".jja-slot-btn:not(.disabled)").forEach(function (button) {
             button.addEventListener("click", function () {
@@ -200,6 +279,75 @@ window.JJA.shareOnWhatsApp = function (text) {
       field && field.addEventListener("change", loadSlots);
     });
     loadSlots();
+  }
+
+  // --- confirmacao antes de salvar (tela de novo agendamento) -------------
+  // Passo de revisao 100% no navegador: mostra um resumo do que foi
+  // preenchido e so envia o formulario depois de um segundo clique.
+  const confirmModalEl = document.getElementById("jjaConfirmModal");
+  const reviewButton = document.getElementById("jjaReviewBtn");
+  if (confirmModalEl && reviewButton && window.bootstrap) {
+    const form = reviewButton.closest("form");
+    const modal = new bootstrap.Modal(confirmModalEl);
+
+    function textFor(id) {
+      const el = document.getElementById(id);
+      if (!el) return "-";
+      if (el.tagName === "SELECT") {
+        const option = el.options[el.selectedIndex];
+        return option && option.value ? option.text : "-";
+      }
+      return el.value ? el.value : "-";
+    }
+
+    reviewButton.addEventListener("click", function () {
+      // Campos type="hidden" ficam fora da validacao nativa do navegador
+      // (mesmo com "required"), entao paciente/profissional -- que usam
+      // busca + campo oculto -- precisam ser checados manualmente aqui.
+      const patientId = document.getElementById("id_patient");
+      const professionalId = document.getElementById("id_professional");
+      const patientName = document.getElementById("jjaPatientSearch");
+      const professionalName = document.getElementById("jjaProfessionalSearch");
+      let missing = false;
+      if (patientId && !patientId.value) {
+        patientName.classList.add("is-invalid");
+        missing = true;
+      } else if (patientName) {
+        patientName.classList.remove("is-invalid");
+      }
+      if (professionalId && !professionalId.value) {
+        professionalName.classList.add("is-invalid");
+        missing = true;
+      } else if (professionalName) {
+        professionalName.classList.remove("is-invalid");
+      }
+      if (missing) {
+        (patientId && !patientId.value ? patientName : professionalName).focus();
+        return;
+      }
+      if (!form.reportValidity()) return;
+
+      confirmModalEl.querySelector("[data-review=patient]").textContent =
+        (patientName && patientName.value) || "-";
+      confirmModalEl.querySelector("[data-review=professional]").textContent =
+        (professionalName && professionalName.value) || "-";
+      confirmModalEl.querySelector("[data-review=service]").textContent = textFor("id_service");
+      confirmModalEl.querySelector("[data-review=room]").textContent = textFor("id_room");
+      const date = textFor("id_date");
+      const time = textFor("id_time");
+      confirmModalEl.querySelector("[data-review=datetime]").textContent =
+        (date !== "-" ? date.split("-").reverse().join("/") : "-") + " as " + time;
+      const valueField = document.getElementById("id_gross_amount");
+      confirmModalEl.querySelector("[data-review=value]").textContent =
+        valueField && valueField.value ? "R$ " + valueField.value : "Valor de tabela do servico";
+
+      modal.show();
+    });
+
+    confirmModalEl.querySelector("[data-confirm-submit]").addEventListener("click", function () {
+      modal.hide();
+      form.submit();
+    });
   }
 
   // --- atalho de busca (tecla /) ------------------------------------------

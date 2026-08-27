@@ -23,6 +23,7 @@ from django.views.generic import (
 
 from apps.core.mixins import ClinicViewMixin
 from apps.core.utils import parse_date
+from apps.patients.models import Patient
 from apps.professionals.models import Professional
 from apps.scheduling import services
 from apps.scheduling.forms import (
@@ -68,14 +69,24 @@ class AgendaBaseMixin(ClinicViewMixin):
         user = self.request.user
         if not user.has_clinic_perm("appointment.view_all", self.request.clinic):
             queryset = queryset.filter(professional__user=user)
+        service = self.request.GET.get("service", "")
+        if service:
+            queryset = queryset.filter(service_id=service)
+        room = self.request.GET.get("room", "")
+        if room:
+            queryset = queryset.filter(room_id=room)
         return queryset
 
     def get_context_data(self, **kwargs):
+        from apps.clinics.models import Room, Service
+
         context = super().get_context_data(**kwargs)
         context["professionals"] = self.get_professional_queryset()
         context["selected_professional"] = self.get_selected_professional()
         context["selected_date"] = self.get_selected_date()
         context["status_choices"] = Appointment.Status.choices
+        context["services"] = Service.objects.filter(is_active=True).order_by("name")
+        context["rooms"] = Room.objects.filter(is_active=True).order_by("name")
         return context
 
 
@@ -249,6 +260,18 @@ class AppointmentDetailView(ClinicViewMixin, DetailView):
             )
             if context["can_manage_payment"]:
                 context["payment_methods"] = PaymentMethod.objects.filter(is_active=True)
+
+        from apps.audit.models import AuditLog
+
+        context["history"] = (
+            AuditLog.objects.filter(
+                clinic=self.request.clinic,
+                object_type="scheduling.Appointment",
+                object_id=str(self.object.pk),
+            )
+            .select_related("user")
+            .order_by("created_at")
+        )
         return context
 
 
@@ -276,6 +299,23 @@ class AppointmentCreateView(ClinicViewMixin, CreateView):
         if self.request.GET.get("patient"):
             initial["patient"] = self.request.GET["patient"]
         return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # O <select> de paciente/profissional virou um campo de busca (ver
+        # AppointmentForm.Meta.widgets) -- quando a tela chega com um id
+        # pre-selecionado via querystring (ex.: busca rapida da recepcao,
+        # "Novo agendamento" a partir do perfil do paciente), o campo de
+        # texto tambem precisa vir preenchido com o nome, nao so o id.
+        patient_id = self.request.GET.get("patient")
+        if patient_id:
+            context["prefill_patient"] = Patient.objects.filter(pk=patient_id).first()
+        professional_id = self.request.GET.get("professional")
+        if professional_id:
+            context["prefill_professional"] = Professional.objects.filter(
+                pk=professional_id
+            ).first()
+        return context
 
     def form_valid(self, form):
         try:

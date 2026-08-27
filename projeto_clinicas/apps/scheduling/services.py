@@ -158,20 +158,58 @@ def validate_appointment(appointment: Appointment, *, allow_overbooking: bool = 
             + (f" ({blocked[0].reason})" if blocked[0].reason else "")
         )
 
-    conflicts = conflicting_appointments(
-        appointment.professional,
-        appointment.start_at,
-        appointment.end_at,
-        exclude_pk=appointment.pk,
-        room=appointment.room,
+    # Verificacoes separadas (paciente / profissional / sala) para que a
+    # mensagem de erro seja especifica -- "sala ocupada" e algo bem
+    # diferente de "profissional ocupado" para quem esta agendando.
+    base_conflicts = Appointment.objects.active().filter(
+        start_at__lt=appointment.end_at, end_at__gt=appointment.start_at
     )
-    conflict = conflicts.first()
-    if conflict is not None and not (allow_overbooking and appointment.is_overbooking):
+    if appointment.pk:
+        base_conflicts = base_conflicts.exclude(pk=appointment.pk)
+
+    # O paciente nao pode estar em dois atendimentos ao mesmo tempo --
+    # regra rigida, nunca contornada pelo encaixe (overbooking).
+    patient_conflict = (
+        base_conflicts.filter(patient=appointment.patient)
+        .select_related("professional")
+        .first()
+    )
+    if patient_conflict is not None:
         raise SchedulingError(
-            "Ja existe agendamento neste horario: "
-            f"{conflict.patient.display_name} as "
-            f"{timezone.localtime(conflict.start_at):%H:%M}."
+            "O paciente ja possui outro atendimento neste horario, com "
+            f"{patient_conflict.professional.display_name} as "
+            f"{timezone.localtime(patient_conflict.start_at):%H:%M}."
         )
+
+    professional_conflict = (
+        base_conflicts.filter(professional=appointment.professional)
+        .select_related("patient")
+        .first()
+    )
+    if professional_conflict is not None and not (
+        allow_overbooking and appointment.is_overbooking
+    ):
+        raise SchedulingError(
+            "O profissional ja possui atendimento neste horario: "
+            f"{professional_conflict.patient.display_name} as "
+            f"{timezone.localtime(professional_conflict.start_at):%H:%M}."
+        )
+
+    if appointment.room_id:
+        room_conflict = (
+            base_conflicts.filter(room=appointment.room)
+            .exclude(professional=appointment.professional)
+            .select_related("patient")
+            .first()
+        )
+        if room_conflict is not None and not (
+            allow_overbooking and appointment.is_overbooking
+        ):
+            raise SchedulingError(
+                "A sala ja esta ocupada neste horario por "
+                f"{room_conflict.patient.display_name} as "
+                f"{timezone.localtime(room_conflict.start_at):%H:%M}."
+            )
 
 
 @transaction.atomic

@@ -4,12 +4,41 @@
 {% block page_subtitle %}{{ appointment.start_at|date:"d/m/Y H:i" }} &middot; {{ appointment.get_status_display }}{% endblock %}
 
 {% block page_actions %}
+  {% if perms_clinic.medicalrecord_add or perms_clinic.medicalrecord_view %}
+    {% if appointment.record_entries.count %}
+      <a class="btn btn-outline-primary" href="{% url 'medical_records:record-detail' appointment.patient.pk %}">
+        <i class="bi bi-journal-medical"></i> Abrir prontuario
+      </a>
+    {% else %}
+      <a class="btn btn-outline-primary" href="{% url 'medical_records:entry-create' appointment.patient.pk %}?appointment={{ appointment.pk }}">
+        <i class="bi bi-journal-medical"></i> Abrir prontuario
+      </a>
+    {% endif %}
+  {% endif %}
   {% if can_change %}
     <a class="btn btn-outline-secondary" href="{% url 'scheduling:appointment-update' appointment.pk %}"><i class="bi bi-pencil"></i> Editar</a>
   {% endif %}
 {% endblock %}
 
 {% block content %}
+{% if appointment.status == 'completed' %}
+  <div class="alert alert-success d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <span><i class="bi bi-check-circle-fill"></i> Atendimento finalizado.</span>
+    <div class="d-flex flex-wrap gap-2">
+      {% if perms_clinic.medicalrecord_add or perms_clinic.medicalrecord_view %}
+        {% if appointment.record_entries.count %}
+          <a class="btn btn-sm btn-success" href="{% url 'medical_records:record-detail' appointment.patient.pk %}">Abrir prontuario</a>
+        {% else %}
+          <a class="btn btn-sm btn-success" href="{% url 'medical_records:entry-create' appointment.patient.pk %}?appointment={{ appointment.pk }}">Abrir prontuario</a>
+        {% endif %}
+      {% endif %}
+      {% if perms_clinic.appointment_add %}
+        <a class="btn btn-sm btn-outline-success" href="{% url 'scheduling:appointment-create' %}">Novo agendamento</a>
+      {% endif %}
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'scheduling:agenda-day' %}">Voltar para a agenda</a>
+    </div>
+  </div>
+{% endif %}
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="card mb-3">
@@ -151,6 +180,26 @@
             <div class="col-5"><input class="form-control form-control-sm" type="time" name="time" required></div>
             <div class="col-12"><button class="btn btn-sm btn-outline-secondary w-100" type="submit">Remarcar</button></div>
           </form>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if history %}
+      <div class="card mt-3">
+        <div class="card-header">Historico</div>
+        <div class="card-body">
+          <div class="jja-timeline">
+            {% for item in history %}
+              <div class="jja-timeline-item small">
+                <div class="text-body-secondary">{{ item.created_at|date:"d/m/Y H:i" }}</div>
+                <div>
+                  {{ item.action_label }}
+                  {% if item.user_email %}<span class="text-body-secondary">por {{ item.user_email }}</span>{% endif %}
+                </div>
+                {% if item.description %}<div class="text-body-secondary">{{ item.description }}</div>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
     {% endif %}

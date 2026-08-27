@@ -3,7 +3,44 @@
 {% block page_title %}Painel da recepcao{% endblock %}
 {% block page_subtitle %}{{ today_summary.total }} agendamento(s) hoje{% endblock %}
 
+{% block page_actions %}
+  <button class="btn btn-outline-secondary btn-sm" type="button" id="jjaSimpleModeToggle">
+    <i class="bi bi-sliders"></i> Modo simplificado
+  </button>
+{% endblock %}
+
 {% block content %}
+<div class="card mb-3 jja-hide-simple">
+  <div class="card-body d-flex flex-wrap gap-2">
+    {% if perms_clinic.appointment_add %}
+      <a class="btn btn-primary btn-sm" href="{% url 'scheduling:appointment-create' %}"><i class="bi bi-plus-lg"></i> Novo agendamento</a>
+    {% endif %}
+    {% if perms_clinic.patient_add %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'patients:create' %}"><i class="bi bi-person-plus"></i> Novo paciente</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scheduling:agenda-day' %}"><i class="bi bi-calendar3"></i> Agenda</a>
+    {% if perms_clinic.patient_view %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'patients:list' %}"><i class="bi bi-people"></i> Pacientes</a>
+    {% endif %}
+    {% if can_manage_payment %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'finance:pending-payments' %}"><i class="bi bi-cash"></i> Pagamentos</a>
+    {% endif %}
+    {% if perms_clinic.report_view %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'reports:home' %}"><i class="bi bi-bar-chart"></i> Relatorios</a>
+    {% endif %}
+  </div>
+  {% if perms_clinic.appointment_add %}
+    <div class="card-body border-top pt-3 position-relative">
+      <label class="form-label small mb-1" for="jjaReceptionPatientSearch">Buscar paciente para agendar</label>
+      <input type="text" class="form-control" id="jjaReceptionPatientSearch"
+             placeholder="Nome, CPF, telefone ou numero do prontuario..."
+             data-autocomplete-url="{% url 'patients:search' %}"
+             data-autocomplete-target="jjaReceptionPatientId">
+      <input type="hidden" id="jjaReceptionPatientId">
+    </div>
+  {% endif %}
+</div>
+
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3">
     <div class="jja-stat">
@@ -20,12 +57,18 @@
   </div>
   <div class="col-6 col-lg-3">
     <div class="jja-stat">
+      <div class="label">Finalizados</div>
+      <div class="value">{{ today_summary.completed }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3 jja-hide-simple">
+    <div class="jja-stat">
       <div class="label">Cancelados/Faltas</div>
       <div class="value">{{ today_summary.canceled|add:today_summary.no_show }}</div>
     </div>
   </div>
   {% if can_manage_payment %}
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 jja-hide-simple">
       <div class="jja-stat">
         <div class="label">Pendente hoje</div>
         <div class="value">R$ {{ payments_pending_today|floatformat:2 }}</div>
@@ -123,7 +166,7 @@
       </div>
     </div>
 
-    <div class="card mt-3">
+    <div class="card mt-3 jja-hide-simple">
       <div class="card-header d-flex justify-content-between">
         <span>Agenda de hoje</span>
         <a class="small" href="{% url 'scheduling:agenda-day' %}">Ver agenda completa</a>
@@ -165,7 +208,7 @@
 
   <div class="col-lg-4">
     {% if can_manage_payment %}
-      <div class="card">
+      <div class="card jja-hide-simple">
         <div class="card-header">Financeiro</div>
         <div class="card-body small">
           <p class="mb-1">Recebido hoje: <strong>R$ {{ payments_received_today|floatformat:2 }}</strong></p>
@@ -185,5 +228,43 @@
   // cada 30s e suficiente e nao interrompe o preenchimento de formularios
   // (o timer e sempre reiniciado a cada carregamento da pagina).
   setTimeout(function () { window.location.reload(); }, 30000);
+
+  (function () {
+    "use strict";
+    // Modo simplificado: preferencia por navegador (localStorage), sem
+    // precisar de campo novo no usuario/banco.
+    var STORAGE_KEY = "jja-simple-mode";
+    var toggle = document.getElementById("jjaSimpleModeToggle");
+    function apply(active) {
+      document.body.classList.toggle("jja-simple-mode", active);
+      if (toggle) toggle.classList.toggle("active", active);
+    }
+    try {
+      apply(localStorage.getItem(STORAGE_KEY) === "1");
+    } catch (e) { /* localStorage indisponivel -- mantem modo completo */ }
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        var active = !document.body.classList.contains("jja-simple-mode");
+        apply(active);
+        try { localStorage.setItem(STORAGE_KEY, active ? "1" : "0"); } catch (e) {}
+      });
+    }
+
+    // Busca rapida de paciente: ao escolher um resultado, ja abre um novo
+    // agendamento com o paciente preenchido (passo 1 -> 2 da rotina da
+    // recepcao: "pesquisar paciente" -> "agendar").
+    var patientIdField = document.getElementById("jjaReceptionPatientId");
+    if (patientIdField) {
+      var appointmentCreateUrl = "{% url 'scheduling:appointment-create' %}";
+      // A busca (static/js/jja.js) despacha "change" no campo oculto ao
+      // escolher um resultado -- usamos isso para ja abrir o agendamento
+      // com o paciente preenchido (passo 1 -> 2 da rotina da recepcao).
+      patientIdField.addEventListener("change", function () {
+        if (patientIdField.value) {
+          window.location.href = appointmentCreateUrl + "?patient=" + patientIdField.value;
+        }
+      });
+    }
+  })();
 </script>
 {% endblock %}

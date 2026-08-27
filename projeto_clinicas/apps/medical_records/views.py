@@ -198,6 +198,24 @@ class RecordEntryCreateView(ClinicViewMixin, View):
         record = services.get_or_create_record(patient)
         return patient, record
 
+    def get_appointment(self, request, patient):
+        """
+        Agendamento de origem, se o atendimento foi aberto a partir dele
+        (botao "Abrir prontuario" em ``appointment_detail.html``). Sempre
+        filtrado pelo mesmo paciente -- nunca confia soh no id recebido,
+        mesmo vindo de outra clinica ou de outro paciente da mesma clinica.
+        """
+        appointment_id = request.GET.get("appointment") or request.POST.get("appointment")
+        if not appointment_id:
+            return None
+        from apps.scheduling.models import Appointment
+
+        return (
+            Appointment.objects.filter(pk=appointment_id, patient=patient)
+            .select_related("professional")
+            .first()
+        )
+
     def get_template_obj(self, request, patient):
         template_id = request.POST.get("template") or request.GET.get("template")
         queryset = RecordTemplate.objects.filter(is_active=True)
@@ -217,9 +235,12 @@ class RecordEntryCreateView(ClinicViewMixin, View):
                 "Nenhum modelo de prontuario cadastrado. Configure em Prontuario > Modelos.",
             )
             return redirect("medical_records:template-list")
-        meta_form = RecordEntryMetaForm(user=request.user, initial={
-            "template": template, "attended_at": timezone.localtime()
-        })
+        appointment = self.get_appointment(request, patient)
+        initial = {"template": template, "attended_at": timezone.localtime()}
+        if appointment is not None:
+            initial["professional"] = appointment.professional
+            initial["attended_at"] = timezone.localtime(appointment.start_at)
+        meta_form = RecordEntryMetaForm(user=request.user, initial=initial)
         dynamic_form = DynamicRecordEntryForm(template=template)
         vital_form = VitalSignsForm()
         return render(
@@ -233,12 +254,14 @@ class RecordEntryCreateView(ClinicViewMixin, View):
                 "vital_form": vital_form,
                 "template_obj": template,
                 "templates": RecordTemplate.objects.filter(is_active=True),
+                "appointment": appointment,
             },
         )
 
     def post(self, request, patient_id):
         patient, record = self.get_objects()
         template = self.get_template_obj(request, patient)
+        appointment = self.get_appointment(request, patient)
         meta_form = RecordEntryMetaForm(request.POST, user=request.user)
         dynamic_form = DynamicRecordEntryForm(request.POST, template=template)
         vital_form = VitalSignsForm(request.POST)
@@ -250,11 +273,7 @@ class RecordEntryCreateView(ClinicViewMixin, View):
             entry.template = template
             entry.data = dynamic_form.to_data()
             entry.is_draft = request.POST.get("action") != "sign"
-            appointment_id = request.POST.get("appointment")
-            if appointment_id:
-                from apps.scheduling.models import Appointment
-
-                entry.appointment = Appointment.objects.filter(pk=appointment_id).first()
+            entry.appointment = appointment
             entry.save()
             if any(vital_form.cleaned_data.values()):
                 vitals = vital_form.save(commit=False)
@@ -287,6 +306,7 @@ class RecordEntryCreateView(ClinicViewMixin, View):
                 "vital_form": vital_form,
                 "template_obj": template,
                 "templates": RecordTemplate.objects.filter(is_active=True),
+                "appointment": appointment,
             },
         )
 

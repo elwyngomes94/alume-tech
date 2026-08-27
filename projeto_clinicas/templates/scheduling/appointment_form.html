@@ -7,7 +7,7 @@
   <div class="col-lg-8">
     <div class="card">
       <div class="card-body">
-        <form method="post" novalidate>
+        <form method="post" novalidate id="jjaAppointmentForm">
           {% csrf_token %}
           {% if form.non_field_errors %}
             <div class="alert alert-danger">
@@ -16,8 +16,39 @@
           {% endif %}
 
           <div class="row g-3">
+            <div class="col-md-6 position-relative">
+              <label class="form-label" for="jjaPatientSearch">
+                Paciente <span class="text-danger">*</span>
+              </label>
+              <input type="text" class="form-control" id="jjaPatientSearch"
+                     placeholder="Buscar por nome, CPF, telefone ou numero do prontuario..."
+                     value="{% if form.instance.is_saved %}{{ form.instance.patient.display_name }}{% elif prefill_patient %}{{ prefill_patient.display_name }}{% endif %}"
+                     data-autocomplete-url="{% url 'patients:search' %}"
+                     data-autocomplete-target="id_patient">
+              <div class="form-text">
+                Nao encontrou?
+                <a href="{% url 'patients:create' %}" target="_blank" rel="noopener">+ Cadastrar novo paciente</a>
+                (abre em outra aba; depois volte e busque o nome aqui).
+              </div>
+              <div class="invalid-feedback">Selecione um paciente na lista de busca.</div>
+              {% for error in form.patient.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-6 position-relative">
+              <label class="form-label" for="jjaProfessionalSearch">
+                Profissional <span class="text-danger">*</span>
+              </label>
+              <input type="text" class="form-control" id="jjaProfessionalSearch"
+                     placeholder="Buscar por nome ou especialidade..."
+                     value="{% if form.instance.is_saved %}{{ form.instance.professional.display_name }}{% elif prefill_professional %}{{ prefill_professional.display_name }}{% endif %}"
+                     data-autocomplete-url="{% url 'professionals:search' %}"
+                     data-autocomplete-target="id_professional">
+              <div class="invalid-feedback">Selecione um profissional na lista de busca.</div>
+              {% for error in form.professional.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+
             {% for field in form %}
-              {% if field.name not in "gross_amount discount addition payment_method pay_now amount_paid_now is_courtesy" %}
+              {% if field.name not in "patient professional gross_amount discount addition payment_method pay_now amount_paid_now is_courtesy" %}
                 {% if field.is_hidden %}
                   {{ field }}
                 {% else %}
@@ -94,7 +125,7 @@
           {% endif %}
 
           <div class="mt-4 d-flex gap-2">
-            <button class="btn btn-primary" type="submit">Salvar</button>
+            <button class="btn btn-primary" type="button" id="jjaReviewBtn">Revisar e confirmar</button>
             <a class="btn btn-light" href="{% url 'scheduling:agenda-day' %}">Cancelar</a>
           </div>
         </form>
@@ -105,6 +136,35 @@
     <div class="card">
       <div class="card-header">Horarios livres</div>
       <div class="card-body" id="jjaSlots" data-url="{% url 'scheduling:slots' %}"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="jjaConfirmModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar agendamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <dl class="row mb-0">
+          <dt class="col-4">Paciente</dt><dd class="col-8" data-review="patient"></dd>
+          <dt class="col-4">Profissional</dt><dd class="col-8" data-review="professional"></dd>
+          <dt class="col-4">Servico</dt><dd class="col-8" data-review="service"></dd>
+          <dt class="col-4">Data/horario</dt><dd class="col-8" data-review="datetime"></dd>
+          <dt class="col-4">Sala</dt><dd class="col-8" data-review="room"></dd>
+          <dt class="col-4">Valor</dt><dd class="col-8" data-review="value"></dd>
+        </dl>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+          <i class="bi bi-arrow-left"></i> Voltar
+        </button>
+        <button type="button" class="btn btn-primary" data-confirm-submit>
+          <i class="bi bi-check-lg"></i> Confirmar agendamento
+        </button>
+      </div>
     </div>
   </div>
 </div>

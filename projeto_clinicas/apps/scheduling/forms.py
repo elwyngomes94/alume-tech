@@ -69,7 +69,17 @@ class AppointmentForm(BootstrapFormMixin, forms.ModelForm):
         model = Appointment
         fields = ["patient", "professional", "service", "room", "insurance", "notes",
                   "is_overbooking"]
-        widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 2}),
+            # Paciente/profissional sao escolhidos por uma busca (ver
+            # templates/scheduling/appointment_form.html + JJA.autocomplete
+            # em static/js/jja.js) -- o <select> tradicional nao e viavel
+            # com centenas/milhares de pacientes. O widget continua
+            # validando o valor recebido contra o queryset normalmente,
+            # so a apresentacao muda.
+            "patient": forms.HiddenInput(),
+            "professional": forms.HiddenInput(),
+        }
 
     def __init__(self, *args, clinic=None, user=None, **kwargs):
         self.clinic = clinic

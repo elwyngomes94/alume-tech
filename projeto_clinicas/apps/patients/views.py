@@ -199,11 +199,16 @@ class PatientSearchView(ClinicViewMixin, View):
                 Q(full_name__icontains=term)
                 | Q(social_name__icontains=term)
                 | Q(cpf__icontains=term)
+                | Q(mobile__icontains=term)
+                | Q(phone__icontains=term)
+                | Q(record_number__icontains=term)
             ).order_by("full_name")[:12]
             results = [
                 {
                     "id": str(patient.pk),
                     "text": f"{patient.display_name} - {patient.masked_cpf or 's/ CPF'}",
+                    "detail": f"Prontuario #{patient.record_number}"
+                    + (f" - {patient.primary_phone}" if patient.primary_phone else ""),
                     "record": patient.record_number,
                 }
                 for patient in queryset

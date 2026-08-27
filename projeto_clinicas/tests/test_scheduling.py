@@ -4,18 +4,21 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.core.tenancy import tenant_context
 from apps.scheduling import services
 from apps.scheduling.models import Appointment, ScheduleBlock
 from tests.factories import (
+    make_admin,
     make_appointment,
     make_clinic,
     make_patient,
     make_professional_user,
     make_schedule,
+    make_service,
 )
 
 
@@ -96,3 +99,82 @@ class AppointmentConflictTests(TestCase):
                     clinic=self.clinic, patient=other_patient,
                     professional=self.professional, start_at=start,
                 )
+
+    def test_paciente_nao_pode_ter_dois_atendimentos_no_mesmo_horario(self):
+        """Mesmo com profissionais diferentes, o paciente nao pode estar em dois lugares."""
+        _other_user, other_professional = make_professional_user(self.clinic)
+        start = timezone.now() + timedelta(days=1)
+        with tenant_context(self.clinic):
+            services.create_appointment(
+                clinic=self.clinic, patient=self.patient_1,
+                professional=self.professional, start_at=start,
+            )
+            with self.assertRaises(ValidationError) as ctx:
+                services.create_appointment(
+                    clinic=self.clinic, patient=self.patient_1,
+                    professional=other_professional, start_at=start,
+                )
+        self.assertIn("paciente ja possui", str(ctx.exception).lower())
+
+    def test_conflito_de_paciente_nao_e_contornado_por_encaixe(self):
+        """Overbooking existe para profissional/sala -- nunca para o mesmo paciente."""
+        _other_user, other_professional = make_professional_user(self.clinic)
+        start = timezone.now() + timedelta(days=1)
+        with tenant_context(self.clinic):
+            services.create_appointment(
+                clinic=self.clinic, patient=self.patient_1,
+                professional=self.professional, start_at=start,
+            )
+            with self.assertRaises(ValidationError):
+                services.create_appointment(
+                    clinic=self.clinic, patient=self.patient_1,
+                    professional=other_professional, start_at=start,
+                    is_overbooking=True,
+                )
+
+    def test_mensagem_de_conflito_de_sala_e_especifica(self):
+        from apps.clinics.models import Room
+
+        _other_user, other_professional = make_professional_user(self.clinic)
+        start = timezone.now() + timedelta(days=1)
+        with tenant_context(self.clinic):
+            room = Room.objects.create(name="Sala 1", capacity=1)
+            services.create_appointment(
+                clinic=self.clinic, patient=self.patient_1,
+                professional=self.professional, start_at=start, room=room,
+            )
+            with self.assertRaises(ValidationError) as ctx:
+                services.create_appointment(
+                    clinic=self.clinic, patient=self.patient_2,
+                    professional=other_professional, start_at=start, room=room,
+                )
+        self.assertIn("sala ja esta ocupada", str(ctx.exception).lower())
+
+
+class AgendaFilterTests(TestCase):
+    """Filtros novos da agenda (servico/sala) -- item H do pedido."""
+
+    def setUp(self):
+        self.clinic = make_clinic()
+        self.admin = make_admin(self.clinic)
+        self.user, self.professional = make_professional_user(self.clinic)
+        self.patient = make_patient(self.clinic)
+        self.service_a = make_service(self.clinic, name="Consulta")
+        self.service_b = make_service(self.clinic, name="Retorno")
+        self.appointment_a = make_appointment(
+            self.clinic, self.patient, self.professional, service=self.service_a
+        )
+        self.appointment_b = make_appointment(
+            self.clinic, self.patient, self.professional, service=self.service_b
+        )
+
+    def test_filtro_por_servico_na_lista_da_agenda(self):
+        client = Client()
+        client.force_login(self.admin)
+        response = client.get(
+            reverse("scheduling:agenda-list"), {"service": str(self.service_a.pk)}
+        )
+        self.assertEqual(response.status_code, 200)
+        appointments = list(response.context["appointments"])
+        self.assertIn(self.appointment_a, appointments)
+        self.assertNotIn(self.appointment_b, appointments)
