@@ -197,13 +197,15 @@ window.JJA.shareOnWhatsApp = function (text) {
       }
       const term = input.value.trim();
       clearTimeout(timer);
-      if (term.length < 2) { hide(); return; }
+      // O endpoint ja sabe devolver uma lista padrao (recentes/ativos)
+      // quando o termo esta vazio ou tem so 1 letra -- entao a lista
+      // "aparece" assim que o usuario abre o campo, nao so depois de
+      // digitar 2+ caracteres.
       timer = setTimeout(function () { search(term); }, 250);
     });
 
     input.addEventListener("focus", function () {
-      const term = input.value.trim();
-      if (term.length >= 2 && !hidden.value) search(term);
+      if (!hidden.value) search(input.value.trim());
     });
 
     box.addEventListener("mousedown", function (event) {

@@ -193,7 +193,6 @@ class PatientSearchView(ClinicViewMixin, View):
 
     def get(self, request):
         term = request.GET.get("q", "").strip()
-        results = []
         if len(term) >= 2:
             queryset = Patient.objects.filter(
                 Q(full_name__icontains=term)
@@ -203,16 +202,23 @@ class PatientSearchView(ClinicViewMixin, View):
                 | Q(phone__icontains=term)
                 | Q(record_number__icontains=term)
             ).order_by("full_name")[:12]
-            results = [
-                {
-                    "id": str(patient.pk),
-                    "text": f"{patient.display_name} - {patient.masked_cpf or 's/ CPF'}",
-                    "detail": f"Prontuario #{patient.record_number}"
-                    + (f" - {patient.primary_phone}" if patient.primary_phone else ""),
-                    "record": patient.record_number,
-                }
-                for patient in queryset
-            ]
+        else:
+            # Sem termo (ou so 1 letra): mostra os cadastrados mais recentes
+            # em vez de nada -- assim o campo ja "aparece com a lista de
+            # pacientes" ao ser aberto/focado, nao so depois de digitar.
+            queryset = Patient.objects.filter(
+                status=Patient.Status.ACTIVE
+            ).order_by("-created_at")[:12]
+        results = [
+            {
+                "id": str(patient.pk),
+                "text": f"{patient.display_name} - {patient.masked_cpf or 's/ CPF'}",
+                "detail": f"Prontuario #{patient.record_number}"
+                + (f" - {patient.primary_phone}" if patient.primary_phone else ""),
+                "record": patient.record_number,
+            }
+            for patient in queryset
+        ]
         return JsonResponse({"results": results})
 
 
