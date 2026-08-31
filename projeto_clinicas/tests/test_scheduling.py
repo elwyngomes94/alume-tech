@@ -178,3 +178,30 @@ class AgendaFilterTests(TestCase):
         appointments = list(response.context["appointments"])
         self.assertIn(self.appointment_a, appointments)
         self.assertNotIn(self.appointment_b, appointments)
+
+
+class AppointmentFormRendersRequiredHiddenFieldsTests(TestCase):
+    """
+    Regressao: o campo de busca de paciente/profissional (item A) usa um
+    <input type="hidden"> por baixo (AppointmentForm.Meta.widgets) para
+    carregar o id de fato enviado no POST. Um bug real de template deixou
+    de renderizar esses dois campos ocultos (excluidos do loop generico sem
+    um render explicito no lugar), entao a busca aparecia na tela mas nunca
+    conseguia de fato selecionar ninguem -- só um teste de HTML renderizado
+    pega isso; o Django test client sozinho (sem inspecionar o HTML) não.
+    """
+
+    def setUp(self):
+        self.clinic = make_clinic()
+        self.admin = make_admin(self.clinic)
+
+    def test_tela_de_novo_agendamento_renderiza_os_campos_ocultos_de_paciente_e_profissional(self):
+        client = Client()
+        client.force_login(self.admin)
+        response = client.get(reverse("scheduling:appointment-create"))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('id="id_patient"', content)
+        self.assertIn('id="id_professional"', content)
+        self.assertIn('data-autocomplete-target="id_patient"', content)
+        self.assertIn('data-autocomplete-target="id_professional"', content)

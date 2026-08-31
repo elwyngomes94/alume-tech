@@ -30,6 +30,7 @@
                 <a href="{% url 'patients:create' %}" target="_blank" rel="noopener">+ Cadastrar novo paciente</a>
                 (abre em outra aba; depois volte e busque o nome aqui).
               </div>
+              {{ form.patient }}
               <div class="invalid-feedback">Selecione um paciente na lista de busca.</div>
               {% for error in form.patient.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
             </div>
@@ -43,6 +44,7 @@
                      value="{% if form.instance.is_saved %}{{ form.instance.professional.display_name }}{% elif prefill_professional %}{{ prefill_professional.display_name }}{% endif %}"
                      data-autocomplete-url="{% url 'professionals:search' %}"
                      data-autocomplete-target="id_professional">
+              {{ form.professional }}
               <div class="invalid-feedback">Selecione um profissional na lista de busca.</div>
               {% for error in form.professional.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
             </div>
