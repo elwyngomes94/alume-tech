@@ -16,6 +16,33 @@
     <input class="form-control form-control-sm" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
            onchange="this.form.submit()">
   </div>
+  <div>
+    <label class="form-label small mb-0">Servico</label>
+    <select class="form-select form-select-sm" name="service" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for item in services %}
+        <option value="{{ item.pk }}" {% if request.GET.service == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label small mb-0">Sala</label>
+    <select class="form-select form-select-sm" name="room" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% for item in rooms %}
+        <option value="{{ item.pk }}" {% if request.GET.room == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label small mb-0">Status</label>
+    <select class="form-select form-select-sm" name="status" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
   <div class="btn-group btn-group-sm" role="group">
     <a class="btn btn-outline-secondary {% if request.resolver_match.url_name == 'agenda-day' %}active{% endif %}"
        href="{% url 'scheduling:agenda-day' %}?date={{ selected_date|date:'Y-m-d' }}">Dia</a>

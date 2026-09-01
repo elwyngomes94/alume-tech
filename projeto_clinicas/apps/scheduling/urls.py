@@ -10,6 +10,7 @@ urlpatterns = [
     path("mes/", views.AgendaMonthView.as_view(), name="agenda-month"),
     path("lista/", views.AgendaListView.as_view(), name="agenda-list"),
     path("horarios/", views.SlotsApiView.as_view(), name="slots"),
+    path("eventos/", views.AgendaEventsApiView.as_view(), name="agenda-events"),
     # Agendamentos
     path("agendamento/novo/", views.AppointmentCreateView.as_view(), name="appointment-create"),
     path("agendamento/<uuid:pk>/", views.AppointmentDetailView.as_view(), name="appointment-detail"),

@@ -13,36 +13,15 @@
 
 <form class="jja-filters row g-2 mt-2" method="get">
   <input type="hidden" name="professional" value="{{ request.GET.professional }}">
-  <div class="col-md-3"><input class="form-control" type="date" name="start" value="{{ request.GET.start }}"></div>
-  <div class="col-md-3"><input class="form-control" type="date" name="end" value="{{ request.GET.end }}"></div>
-  <div class="col-md-3">
-    <select class="form-select" name="status">
-      <option value="">Todos os status</option>
-      {% for value, label in status_choices %}
-        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3"><input class="form-control" type="search" name="q" placeholder="Paciente" value="{{ request.GET.q|default:'' }}"></div>
-  <div class="col-md-3">
-    <select class="form-select" name="service">
-      <option value="">Todos os servicos</option>
-      {% for item in services %}
-        <option value="{{ item.pk }}" {% if request.GET.service == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <select class="form-select" name="room">
-      <option value="">Todas as salas</option>
-      {% for item in rooms %}
-        <option value="{{ item.pk }}" {% if request.GET.room == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3 d-flex gap-2">
+  <input type="hidden" name="service" value="{{ request.GET.service }}">
+  <input type="hidden" name="room" value="{{ request.GET.room }}">
+  <input type="hidden" name="status" value="{{ request.GET.status }}">
+  <div class="col-md-3"><input class="form-control" type="date" name="start" value="{{ request.GET.start }}" placeholder="De"></div>
+  <div class="col-md-3"><input class="form-control" type="date" name="end" value="{{ request.GET.end }}" placeholder="Ate"></div>
+  <div class="col-md-4"><input class="form-control" type="search" name="q" placeholder="Paciente" value="{{ request.GET.q|default:'' }}"></div>
+  <div class="col-md-2 d-flex gap-2">
     <button class="btn btn-outline-primary btn-sm">Filtrar</button>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scheduling:agenda-list' %}">Limpar filtros</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scheduling:agenda-list' %}">Limpar</a>
   </div>
 </form>
 

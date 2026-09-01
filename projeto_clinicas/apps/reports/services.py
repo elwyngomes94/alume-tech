@@ -661,6 +661,45 @@ def stock_low_report(start: date, end: date) -> Tuple[List[str], List[List]]:
     return headers, rows
 
 
+def occupancy_report(start: date, end: date) -> Tuple[List[str], List[List]]:
+    """
+    Ocupacao da agenda por profissional/dia -- reaproveita a mesma conta
+    usada no painel "Agenda inteligente" (``apps.scheduling.services.
+    occupancy_for_day``), so que profissional por profissional em vez de
+    somado, para bater com o formato do pedido (seção 23).
+    """
+    from datetime import timedelta as _timedelta
+
+    from apps.professionals.models import Professional
+    from apps.scheduling.services import occupancy_for_day
+
+    professionals = list(Professional.objects.filter(is_active=True).order_by("full_name"))
+    headers = [
+        "Data", "Profissional", "Total de horarios", "Ocupados",
+        "Disponiveis", "Bloqueados", "Taxa de ocupacao",
+    ]
+    rows = []
+    day = start
+    while day <= end:
+        for professional in professionals:
+            occupancy = occupancy_for_day(day, [professional])
+            if occupancy["total"] == 0:
+                continue
+            rows.append(
+                [
+                    day.strftime("%d/%m/%Y"),
+                    professional.display_name,
+                    occupancy["total"],
+                    occupancy["booked"],
+                    occupancy["available"],
+                    occupancy["blocked"],
+                    f"{occupancy['occupancy_percent']}%",
+                ]
+            )
+        day += _timedelta(days=1)
+    return headers, rows
+
+
 def stock_movements_report(start: date, end: date) -> Tuple[List[str], List[List]]:
     from apps.inventory.models import StockMovement
 
@@ -720,6 +759,7 @@ REPORTS = {
     "pagamentos_recepcionista": ("Pagamentos por recepcionista", payments_by_receptionist_report),
     "pagamentos_parciais": ("Pagamentos parciais", partial_payments_report),
     "estornos": ("Estornos", refunds_report),
+    "ocupacao_agenda": ("Ocupacao da agenda", occupancy_report),
     "estoque_produtos": ("Estoque - produtos", stock_products_report),
     "estoque_baixo": ("Estoque - abaixo do minimo", stock_low_report),
     "estoque_movimentacoes": ("Estoque - movimentacoes", stock_movements_report),

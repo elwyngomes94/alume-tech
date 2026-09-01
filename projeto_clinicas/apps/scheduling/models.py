@@ -35,6 +35,11 @@ class ScheduleTemplate(TenantModel, ActiveStatusMixin):
     start_time = models.TimeField("inicio")
     end_time = models.TimeField("fim")
     slot_minutes = models.PositiveIntegerField("intervalo entre horarios (min)", default=30)
+    max_appointments = models.PositiveIntegerField(
+        "maximo de atendimentos no dia", null=True, blank=True,
+        help_text="Vazio = sem limite. A geracao de horarios para de gerar novos "
+        "horarios (livres ou ocupados) assim que atingir este total.",
+    )
     break_start = models.TimeField("inicio do intervalo", null=True, blank=True)
     break_end = models.TimeField("fim do intervalo", null=True, blank=True)
     room = models.ForeignKey(

@@ -205,3 +205,104 @@ class AppointmentFormRendersRequiredHiddenFieldsTests(TestCase):
         self.assertIn('id="id_professional"', content)
         self.assertIn('data-autocomplete-target="id_patient"', content)
         self.assertIn('data-autocomplete-target="id_professional"', content)
+
+
+class AgendaEventsApiTests(TestCase):
+    """Feed de eventos do calendario visual (item C) -- isolamento e escopo."""
+
+    def setUp(self):
+        self.clinic_a = make_clinic(trade_name="Clinica Eventos A")
+        self.clinic_b = make_clinic(trade_name="Clinica Eventos B")
+        self.admin_a = make_admin(self.clinic_a)
+        self.user_a, self.professional_a = make_professional_user(self.clinic_a)
+        self.other_user_a, self.other_professional_a = make_professional_user(self.clinic_a)
+        self.patient_a = make_patient(self.clinic_a, full_name="Paciente Evento A")
+        self.patient_b = make_patient(self.clinic_b, full_name="Paciente Evento B")
+        _other_prof_user, professional_b = make_professional_user(self.clinic_b)
+
+        now = timezone.now()
+        self.appointment_a = make_appointment(
+            self.clinic_a, self.patient_a, self.professional_a,
+            start_at=now, end_at=now + timedelta(minutes=30),
+        )
+        self.appointment_a_other_prof = make_appointment(
+            self.clinic_a, self.patient_a, self.other_professional_a,
+            start_at=now, end_at=now + timedelta(minutes=30),
+        )
+        self.appointment_b = make_appointment(
+            self.clinic_b, self.patient_b, professional_b,
+            start_at=now, end_at=now + timedelta(minutes=30),
+        )
+
+    def _range_params(self):
+        now = timezone.now()
+        return {
+            "start": (now - timedelta(days=1)).isoformat(),
+            "end": (now + timedelta(days=1)).isoformat(),
+        }
+
+    def test_admin_ve_apenas_eventos_da_propria_clinica(self):
+        client = Client()
+        client.force_login(self.admin_a)
+        response = client.get(reverse("scheduling:agenda-events"), self._range_params())
+        self.assertEqual(response.status_code, 200)
+        ids = {item["id"] for item in response.json()}
+        self.assertIn(str(self.appointment_a.pk), ids)
+        self.assertIn(str(self.appointment_a_other_prof.pk), ids)
+        self.assertNotIn(str(self.appointment_b.pk), ids)
+
+    def test_profissional_sem_view_all_ve_apenas_os_proprios_eventos(self):
+        client = Client()
+        client.force_login(self.user_a)
+        response = client.get(reverse("scheduling:agenda-events"), self._range_params())
+        self.assertEqual(response.status_code, 200)
+        ids = {item["id"] for item in response.json()}
+        self.assertIn(str(self.appointment_a.pk), ids)
+        self.assertNotIn(str(self.appointment_a_other_prof.pk), ids)
+
+
+class AppointmentRescheduleAjaxTests(TestCase):
+    """Reagendar via arrastar-e-soltar no calendario (item C) -- resposta JSON."""
+
+    def setUp(self):
+        self.clinic = make_clinic()
+        self.admin = make_admin(self.clinic)
+        self.user, self.professional = make_professional_user(self.clinic)
+        self.patient = make_patient(self.clinic)
+        self.appointment = make_appointment(self.clinic, self.patient, self.professional)
+
+    def test_reagendar_via_ajax_com_sucesso_retorna_json(self):
+        client = Client()
+        client.force_login(self.admin)
+        new_start = timezone.now() + timedelta(days=2)
+        response = client.post(
+            reverse("scheduling:appointment-reschedule", args=[self.appointment.pk]),
+            {"start": new_start.isoformat()},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"ok": True})
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.start_at, new_start)
+
+    def test_reagendar_via_ajax_com_conflito_retorna_erro_json_sem_alterar_o_agendamento(self):
+        _other_user, other_professional = make_professional_user(self.clinic)
+        conflicting_start = timezone.now() + timedelta(days=3)
+        make_appointment(
+            self.clinic, self.patient, other_professional,
+            start_at=conflicting_start, end_at=conflicting_start + timedelta(minutes=30),
+        )
+        original_start = self.appointment.start_at
+
+        client = Client()
+        client.force_login(self.admin)
+        response = client.post(
+            reverse("scheduling:appointment-reschedule", args=[self.appointment.pk]),
+            {"start": conflicting_start.isoformat()},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("paciente ja possui", response.json()["detail"].lower())
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.start_at, original_start)

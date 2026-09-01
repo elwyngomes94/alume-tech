@@ -1,7 +1,6 @@
 """Views da agenda: visualizacoes, agendamentos, bloqueios e lista de espera."""
 from __future__ import annotations
 
-import calendar
 from datetime import date, datetime, timedelta
 
 from django.contrib import messages
@@ -11,6 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.generic import (
     CreateView,
@@ -90,114 +90,38 @@ class AgendaBaseMixin(ClinicViewMixin):
         return context
 
 
-class AgendaDayView(AgendaBaseMixin, TemplateView):
-    template_name = "scheduling/agenda_day.html"
+class AgendaCalendarView(AgendaBaseMixin, TemplateView):
+    """
+    Calendario visual (FullCalendar) da agenda -- dia/semana/mes sao a
+    mesma tela, so trocando a visualizacao inicial do FullCalendar
+    (``initial_view``); os eventos sao carregados via
+    ``scheduling:agenda-events`` (fetch), nao pelo contexto do Django.
+    Mantido como 3 rotas/nomes de URL separados (dia/semana/mes) porque
+    varios templates ja linkam para eles -- nenhum link quebra.
+    """
+
+    template_name = "scheduling/agenda_calendar.html"
+    initial_view = "timeGridWeek"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        day = context["selected_date"]
-        start = timezone.make_aware(
-            datetime.combine(day, datetime.min.time()), timezone.get_current_timezone()
+        context["initial_view"] = self.initial_view
+        context["summary"] = services.agenda_summary(
+            self.request.clinic, context["selected_date"]
         )
-        end = start + timedelta(days=1)
-
-        appointments = self.base_appointments().filter(start_at__gte=start, start_at__lt=end)
-        professional = context["selected_professional"]
-        if professional:
-            appointments = appointments.filter(professional=professional)
-
-        context["appointments"] = appointments.order_by("start_at")
-        context["summary"] = services.agenda_summary(self.request.clinic, day)
-        context["previous_day"] = day - timedelta(days=1)
-        context["next_day"] = day + timedelta(days=1)
-        if professional:
-            context["slots"] = services.day_slots(professional, day)
         return context
 
 
-class AgendaWeekView(AgendaBaseMixin, TemplateView):
-    template_name = "scheduling/agenda_week.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        day = context["selected_date"]
-        week_start = day - timedelta(days=day.weekday())
-        week_end = week_start + timedelta(days=7)
-        start = timezone.make_aware(
-            datetime.combine(week_start, datetime.min.time()), timezone.get_current_timezone()
-        )
-        end = start + timedelta(days=7)
-
-        appointments = self.base_appointments().filter(start_at__gte=start, start_at__lt=end)
-        professional = context["selected_professional"]
-        if professional:
-            appointments = appointments.filter(professional=professional)
-
-        days = []
-        for offset in range(7):
-            current = week_start + timedelta(days=offset)
-            days.append(
-                {
-                    "date": current,
-                    "appointments": [
-                        item
-                        for item in appointments
-                        if timezone.localtime(item.start_at).date() == current
-                    ],
-                }
-            )
-        context["week_days"] = days
-        context["week_start"] = week_start
-        context["week_end"] = week_end - timedelta(days=1)
-        context["previous_week"] = week_start - timedelta(days=7)
-        context["next_week"] = week_start + timedelta(days=7)
-        return context
+class AgendaDayView(AgendaCalendarView):
+    initial_view = "timeGridDay"
 
 
-class AgendaMonthView(AgendaBaseMixin, TemplateView):
-    template_name = "scheduling/agenda_month.html"
+class AgendaWeekView(AgendaCalendarView):
+    initial_view = "timeGridWeek"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        day = context["selected_date"]
-        first_day = day.replace(day=1)
-        _, days_in_month = calendar.monthrange(day.year, day.month)
-        last_day = first_day + timedelta(days=days_in_month)
 
-        start = timezone.make_aware(
-            datetime.combine(first_day, datetime.min.time()), timezone.get_current_timezone()
-        )
-        end = timezone.make_aware(
-            datetime.combine(last_day, datetime.min.time()), timezone.get_current_timezone()
-        )
-        appointments = self.base_appointments().filter(start_at__gte=start, start_at__lt=end)
-        professional = context["selected_professional"]
-        if professional:
-            appointments = appointments.filter(professional=professional)
-
-        counters = {}
-        for item in appointments:
-            key = timezone.localtime(item.start_at).date()
-            counters.setdefault(key, []).append(item)
-
-        weeks = []
-        calendar.setfirstweekday(calendar.MONDAY)
-        for week in calendar.monthcalendar(day.year, day.month):
-            row = []
-            for day_number in week:
-                current = date(day.year, day.month, day_number) if day_number else None
-                row.append(
-                    {
-                        "date": current,
-                        "appointments": counters.get(current, []) if current else [],
-                    }
-                )
-            weeks.append(row)
-        context["weeks"] = weeks
-        context["month_label"] = f"{first_day:%m/%Y}"
-        context["previous_month"] = (first_day - timedelta(days=1)).replace(day=1)
-        context["next_month"] = last_day
-        return context
+class AgendaMonthView(AgendaCalendarView):
+    initial_view = "dayGridMonth"
 
 
 class AgendaListView(AgendaBaseMixin, ListView):
@@ -414,23 +338,120 @@ class AppointmentRescheduleView(ClinicViewMixin, View):
     required_permission = "appointment.change"
 
     def post(self, request, pk):
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
         appointment = get_object_or_404(Appointment.objects.all(), pk=pk)
-        new_date = parse_date(request.POST.get("date", ""))
-        new_time = request.POST.get("time", "")
-        if not new_date or not new_time:
-            messages.error(request, "Informe a nova data e horario.")
-            return redirect("scheduling:appointment-detail", pk=pk)
-        try:
-            hour, minute = (int(part) for part in new_time.split(":")[:2])
-            new_start = timezone.make_aware(
-                datetime.combine(new_date, datetime.min.time().replace(hour=hour, minute=minute)),
-                timezone.get_current_timezone(),
-            )
-            services.reschedule(appointment, new_start, user=request.user)
-            messages.success(request, "Agendamento remarcado.")
-        except (ValueError, ValidationError) as exc:
-            messages.error(request, getattr(exc, "messages", [str(exc)])[0])
+
+        new_start = None
+        error = None
+        # O calendario (arrastar-e-soltar) manda o novo inicio pronto em
+        # ISO 8601; o formulario de "Remarcar" na tela do agendamento manda
+        # data e horario separados -- aceitamos os dois formatos aqui em
+        # vez de duplicar a view.
+        if request.POST.get("start"):
+            new_start = parse_datetime(request.POST["start"])
+            if new_start and timezone.is_naive(new_start):
+                new_start = timezone.make_aware(new_start, timezone.get_current_timezone())
+            if new_start is None:
+                error = "Data/horario invalido."
+        else:
+            new_date = parse_date(request.POST.get("date", ""))
+            new_time = request.POST.get("time", "")
+            if not new_date or not new_time:
+                error = "Informe a nova data e horario."
+            else:
+                try:
+                    hour, minute = (int(part) for part in new_time.split(":")[:2])
+                    new_start = timezone.make_aware(
+                        datetime.combine(
+                            new_date, datetime.min.time().replace(hour=hour, minute=minute)
+                        ),
+                        timezone.get_current_timezone(),
+                    )
+                except ValueError:
+                    error = "Horario invalido."
+
+        if error is None and new_start is not None:
+            try:
+                services.reschedule(appointment, new_start, user=request.user)
+                if is_ajax:
+                    return JsonResponse({"ok": True})
+                messages.success(request, "Agendamento remarcado.")
+                return redirect("scheduling:appointment-detail", pk=pk)
+            except (ValueError, ValidationError) as exc:
+                error = getattr(exc, "messages", [str(exc)])[0]
+
+        if is_ajax:
+            return JsonResponse({"ok": False, "detail": error}, status=409)
+        messages.error(request, error)
         return redirect("scheduling:appointment-detail", pk=pk)
+
+
+class AgendaEventsApiView(AgendaBaseMixin, View):
+    """
+    Feed de eventos para o calendario visual (FullCalendar).
+
+    Reaproveita o mesmo escopo/filtros de ``AgendaBaseMixin`` -- o
+    profissional sem ``appointment.view_all`` continua enxergando so a
+    propria agenda, exatamente como nas visoes dia/semana/mes/lista.
+    """
+
+    #: Paleta padrao do Bootstrap 5.3 -- mesmas cores usadas nos badges de
+    #: status em toda a agenda (``Appointment.status_color``), so em hex.
+    STATUS_HEX = {
+        "secondary": "#6c757d",
+        "primary": "#0b5ed7",
+        "info": "#0dcaf0",
+        "warning": "#ffc107",
+        "success": "#198754",
+        "danger": "#dc3545",
+        "dark": "#212529",
+    }
+
+    def get(self, request):
+        start = parse_datetime(request.GET.get("start", "")) or (
+            timezone.now() - timedelta(days=31)
+        )
+        end = parse_datetime(request.GET.get("end", "")) or (timezone.now() + timedelta(days=31))
+        if timezone.is_naive(start):
+            start = timezone.make_aware(start, timezone.get_current_timezone())
+        if timezone.is_naive(end):
+            end = timezone.make_aware(end, timezone.get_current_timezone())
+
+        queryset = self.base_appointments().filter(start_at__lt=end, end_at__gt=start)
+        professional = request.GET.get("professional", "")
+        if professional:
+            queryset = queryset.filter(professional_id=professional)
+        service = request.GET.get("service", "")
+        if service:
+            queryset = queryset.filter(service_id=service)
+        room = request.GET.get("room", "")
+        if room:
+            queryset = queryset.filter(room_id=room)
+        status = request.GET.get("status", "")
+        if status:
+            queryset = queryset.filter(status=status)
+
+        events = []
+        for appointment in queryset.order_by("start_at")[:500]:
+            color = self.STATUS_HEX.get(appointment.status_color, "#6c757d")
+            events.append(
+                {
+                    "id": str(appointment.pk),
+                    "title": appointment.patient.display_name,
+                    "start": appointment.start_at.isoformat(),
+                    "end": appointment.end_at.isoformat(),
+                    "url": reverse("scheduling:appointment-detail", args=[appointment.pk]),
+                    "backgroundColor": color,
+                    "borderColor": color,
+                    "extendedProps": {
+                        "status": appointment.get_status_display(),
+                        "professional": appointment.professional.display_name,
+                        "service": str(appointment.service) if appointment.service_id else "-",
+                        "room": str(appointment.room) if appointment.room_id else "-",
+                    },
+                }
+            )
+        return JsonResponse(events, safe=False)
 
 
 class SlotsApiView(ClinicViewMixin, View):

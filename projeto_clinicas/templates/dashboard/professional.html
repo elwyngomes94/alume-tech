@@ -9,6 +9,20 @@
     Seu usuario nao esta vinculado a um cadastro de profissional nesta clinica.
   </div>
 {% else %}
+{% if occupancy.total %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center small mb-1">
+        <span>Ocupacao de hoje</span>
+        <strong>{{ occupancy.occupancy_percent }}% ({{ occupancy.booked }}/{{ occupancy.bookable }})</strong>
+      </div>
+      <div class="progress" style="height: 8px;">
+        <div class="progress-bar {% if occupancy.occupancy_percent >= 90 %}bg-danger{% elif occupancy.occupancy_percent >= 60 %}bg-warning{% else %}bg-success{% endif %}"
+             style="width: {{ occupancy.occupancy_percent }}%"></div>
+      </div>
+    </div>
+  </div>
+{% endif %}
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3">
     <div class="jja-stat">

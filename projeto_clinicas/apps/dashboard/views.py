@@ -171,8 +171,11 @@ class ProfessionalDashboardView(ClinicViewMixin, TemplateView):
         if professional is None:
             return context
 
+        from apps.scheduling.services import occupancy_for_day
+
         today = timezone.localdate()
         appointments = Appointment.objects.filter(professional=professional)
+        context["occupancy"] = occupancy_for_day(today, [professional])
         context.update(
             {
                 "today_appointments": appointments.filter(start_at__date=today)
@@ -294,6 +297,31 @@ class ReceptionDashboardView(ClinicViewMixin, TemplateView):
             )
             context["payments_pending_today"] = sum((r.balance for r in pending), 0)
             context["payments_pending_count"] = pending.count()
+
+        # Painel "inteligente": ocupacao do dia + alertas objetivos (nada
+        # de "IA" -- so contagens diretas do banco).
+        from apps.professionals.models import Professional
+        from apps.scheduling.models import WaitingListEntry
+        from apps.scheduling.services import occupancy_for_day
+
+        professionals = list(Professional.objects.filter(is_active=True))
+        context["occupancy"] = occupancy_for_day(today, professionals)
+
+        alerts = []
+        unconfirmed = sum(
+            1 for a in today_appointments if a.status == Appointment.Status.SCHEDULED
+        )
+        if unconfirmed:
+            alerts.append(f"{unconfirmed} agendamento(s) de hoje ainda nao confirmado(s).")
+        tomorrow_occupancy = occupancy_for_day(today + timedelta(days=1), professionals)
+        if tomorrow_occupancy["available"]:
+            alerts.append(f"{tomorrow_occupancy['available']} horario(s) livre(s) amanha.")
+        waiting_list_count = WaitingListEntry.objects.filter(
+            status=WaitingListEntry.Status.WAITING
+        ).count()
+        if waiting_list_count:
+            alerts.append(f"{waiting_list_count} paciente(s) na lista de espera.")
+        context["smart_alerts"] = alerts
         return context
 
 

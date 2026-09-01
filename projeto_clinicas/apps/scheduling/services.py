@@ -109,7 +109,14 @@ def day_slots(professional, day: date, service=None) -> List[Slot]:
         break_start = _aware(day, template.break_start) if template.break_start else None
         break_end = _aware(day, template.break_end) if template.break_end else None
 
+        generated = 0
         while cursor + step <= limit:
+            if template.max_appointments and generated >= template.max_appointments:
+                # Capacidade diaria configurada pelo profissional/admin
+                # (ScheduleTemplate.max_appointments) -- para de gerar
+                # horarios (livres ou ocupados) ao atingir o limite, nunca
+                # deixando o atendente escolher um horario alem dele.
+                break
             slot_end = cursor + step
             reason = ""
             appointment = None
@@ -127,6 +134,7 @@ def day_slots(professional, day: date, service=None) -> List[Slot]:
                     break
 
             slots.append(Slot(cursor, slot_end, available, reason, appointment))
+            generated += 1
             cursor = slot_end
     return sorted(slots, key=lambda slot: slot.start)
 
@@ -134,6 +142,36 @@ def day_slots(professional, day: date, service=None) -> List[Slot]:
 def available_slots(professional, day: date, service=None) -> List[Slot]:
     now = timezone.now()
     return [slot for slot in day_slots(professional, day, service) if slot.available and slot.start > now]
+
+
+def occupancy_for_day(day: date, professionals) -> dict:
+    """
+    Ocupacao da agenda de uma lista de profissionais num dia: quantos
+    horarios sao realmente reservaveis (exclui intervalos/bloqueios),
+    quantos ja estao ocupados por um agendamento e a taxa de ocupacao.
+    Usado no painel "inteligente" da recepcao/profissional e no
+    relatorio de ocupacao (``apps.reports.services.occupancy_report``).
+    """
+    bookable = 0
+    booked = 0
+    blocked = 0
+    for professional in professionals:
+        for slot in day_slots(professional, day):
+            if not slot.available and slot.appointment is None:
+                blocked += 1
+                continue
+            bookable += 1
+            if not slot.available:
+                booked += 1
+    percent = round((booked / bookable) * 100) if bookable else 0
+    return {
+        "total": bookable + blocked,
+        "bookable": bookable,
+        "booked": booked,
+        "available": bookable - booked,
+        "blocked": blocked,
+        "occupancy_percent": percent,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +195,39 @@ def validate_appointment(appointment: Appointment, *, allow_overbooking: bool = 
             f"Horario indisponivel: {blocked[0].get_kind_display()}"
             + (f" ({blocked[0].reason})" if blocked[0].reason else "")
         )
+
+    # Capacidade diaria (ScheduleTemplate.max_appointments): mesmo que
+    # alguem tente forcar um horario fora da lista gerada por day_slots,
+    # o backend precisa recusar sozinho -- nunca confiar so no frontend.
+    appointment_day = timezone.localtime(appointment.start_at).date()
+    day_template = next(
+        (
+            template
+            for template in ScheduleTemplate.objects.filter(
+                professional=appointment.professional, is_active=True
+            )
+            if template.applies_to(appointment_day)
+        ),
+        None,
+    )
+    if day_template is not None and day_template.max_appointments:
+        day_start = _aware(appointment_day, time(0, 0))
+        day_end = day_start + timedelta(days=1)
+        same_day_count = (
+            Appointment.objects.active()
+            .filter(
+                professional=appointment.professional,
+                start_at__gte=day_start,
+                start_at__lt=day_end,
+            )
+            .exclude(pk=appointment.pk)
+            .count()
+        )
+        if same_day_count >= day_template.max_appointments:
+            raise SchedulingError(
+                f"Este profissional ja atingiu o limite de "
+                f"{day_template.max_appointments} atendimento(s) para este dia."
+            )
 
     # Verificacoes separadas (paciente / profissional / sala) para que a
     # mensagem de erro seja especifica -- "sala ocupada" e algo bem
@@ -235,6 +306,15 @@ def create_appointment(
     amount_paid_now: Optional[Decimal] = None,
     is_courtesy: bool = False,
 ) -> Appointment:
+    from apps.professionals.models import Professional
+
+    # Trava o profissional pela duracao da transacao: sem isso, duas
+    # requisicoes concorrentes para o mesmo horario passariam pela
+    # checagem de conflito antes de qualquer uma gravar (condicao de
+    # corrida). A segunda so prossegue depois que a primeira ja commitou
+    # -- nesse ponto o SELECT de conflito ja enxerga o agendamento novo.
+    Professional.objects.select_for_update().get(pk=professional.pk)
+
     duration = duration_minutes or (
         service.duration_minutes if service else professional.appointment_duration
     )
@@ -272,6 +352,10 @@ def create_appointment(
 
 @transaction.atomic
 def reschedule(appointment: Appointment, new_start: datetime, *, user=None) -> Appointment:
+    from apps.professionals.models import Professional
+
+    Professional.objects.select_for_update().get(pk=appointment.professional_id)
+
     duration = appointment.duration_minutes or 30
     appointment.start_at = new_start
     appointment.end_at = new_start + timedelta(minutes=duration)

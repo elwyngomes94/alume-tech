@@ -160,6 +160,7 @@ class ScheduleTemplateForm(BootstrapFormMixin, forms.ModelForm):
             "start_time",
             "end_time",
             "slot_minutes",
+            "max_appointments",
             "break_start",
             "break_end",
             "room",
