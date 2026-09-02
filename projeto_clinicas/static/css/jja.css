@@ -188,6 +188,10 @@ body.jja-simple-mode .jja-hide-simple { display: none !important; }
 .jja-autocomplete-item strong { display: block; font-size: .9rem; }
 .jja-autocomplete-item small { color: #6b7280; }
 .jja-autocomplete-empty { padding: .65rem .75rem; color: #6b7280; font-size: .85rem; }
+.jja-autocomplete-skeleton-item { padding: .5rem .75rem; border-bottom: 1px solid var(--jja-border); }
+.jja-autocomplete-skeleton-item:last-child { border-bottom: none; }
+.jja-autocomplete-skeleton-item strong { display: block; height: .9rem; width: 65%; margin-bottom: .35rem; }
+.jja-autocomplete-skeleton-item small { display: block; height: .7rem; width: 40%; }
 
 /* ---------- prontuario ---------- */
 .jja-timeline { position: relative; padding-left: 1.5rem; }
@@ -222,4 +226,68 @@ body.jja-simple-mode .jja-hide-simple { display: none !important; }
   .jja-content { padding: 0; }
   body { background: #fff; }
   .card { border: none; }
+}
+
+/* ==========================================================================
+   Animacoes e microinteracoes -- rapidas e discretas, nunca no caminho do
+   trabalho (nada acima de ~250ms, sem repetir a cada re-render). Cada regra
+   reaproveita classes/componentes que ja existem em todo o sistema, entao
+   nenhum template precisa mudar para ganhar o efeito.
+   ========================================================================== */
+@keyframes jja-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes jja-fade-in-simple { from { opacity: 0; } to { opacity: 1; } }
+@keyframes jja-shimmer { 0% { background-position: -240px 0; } 100% { background-position: calc(240px + 100%) 0; } }
+
+/* Entrada suave ao carregar qualquer pagina do sistema (painel, plataforma,
+   portal e autenticacao) -- roda uma vez por navegacao, nao a cada clique. */
+.jja-content, .jja-auth, main.container { animation: jja-fade-in .28s ease-out; }
+
+/* Cards e paineis de indicador: sombra um pouco mais forte ao passar o
+   mouse, sinalizando que sao clicaveis/tem acoes, sem "pular" a ponto de
+   atrapalhar leitura numa lista longa. */
+.card, .jja-stat {
+  transition: box-shadow .18s ease, border-color .18s ease;
+}
+.card:hover, .jja-stat:hover {
+  box-shadow: 0 .5rem 1.25rem rgba(15, 23, 42, .08);
+}
+.jja-stat-icon { transition: transform .2s ease; }
+.jja-stat:hover .jja-stat-icon { transform: scale(1.08); }
+
+.btn, .badge, .jja-nav-link, .jja-autocomplete-item, .list-group-item-action {
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease,
+              box-shadow .15s ease, transform .1s ease;
+}
+.btn:active { transform: translateY(1px); }
+
+.table-hover > tbody > tr { transition: background-color .12s ease; }
+
+/* Alertas (mensagens do Django) e dropdowns ja aparecem/desaparecem "no
+   susto" por padrao -- uma entrada leve ajuda a notar o feedback. */
+.alert, .dropdown-menu.show { animation: jja-fade-in-simple .15s ease-out; }
+
+/* Skeleton loading: para telas que buscam dado via fetch antes de ter algo
+   para mostrar (ex.: enquanto a busca de paciente/profissional carrega).
+   Uso: adicionar/remover a classe "jja-skeleton" no elemento via JS. */
+.jja-skeleton {
+  background: linear-gradient(90deg, #eef1f5 25%, #f8f9fb 37%, #eef1f5 63%);
+  background-size: 240px 100%;
+  animation: jja-shimmer 1.3s ease infinite;
+  border-radius: .35rem;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+/* Acessibilidade: quem pede menos movimento no sistema operacional nao
+   deve ver nenhuma dessas animacoes/transicoes. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

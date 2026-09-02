@@ -178,7 +178,22 @@ window.JJA.shareOnWhatsApp = function (text) {
       box.classList.add("show");
     }
 
+    function showLoadingSkeleton() {
+      // Placeholder enquanto a busca esta em voo -- sem isso a caixa de
+      // resultados ficava vazia e "parada" ate a resposta chegar. Usa uma
+      // classe propria (nao ".jja-autocomplete-item") de proposito: assim
+      // nunca corresponde ao seletor do clique de selecionar um resultado,
+      // mesmo se alguem clicar bem no instante em que ainda esta carregando.
+      box.innerHTML = [1, 2, 3].map(function () {
+        return '<div class="jja-autocomplete-skeleton-item">' +
+               '<strong class="jja-skeleton">&nbsp;</strong>' +
+               '<small class="jja-skeleton">&nbsp;</small></div>';
+      }).join("");
+      box.classList.add("show");
+    }
+
     function search(term) {
+      showLoadingSkeleton();
       fetch(input.dataset.autocompleteUrl + "?q=" + encodeURIComponent(term), {
         headers: { "X-Requested-With": "XMLHttpRequest" }
       })
