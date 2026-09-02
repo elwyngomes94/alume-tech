@@ -50,6 +50,18 @@ class FinanceDashboardView(ClinicViewMixin, TemplateView):
         context["period"] = period
         context["start"] = start
         context["end"] = end
+
+        from django.urls import reverse
+
+        query = f"?period={period}&start={start:%Y-%m-%d}&end={end:%Y-%m-%d}"
+        context["pdf_url"] = reverse("reports:export", args=["resultado_financeiro", "pdf"]) + query
+        context["excel_url"] = (
+            reverse("reports:export", args=["resultado_financeiro", "xlsx"]) + query
+        )
+        context["whatsapp_text"] = (
+            f"Ola! Segue o resultado financeiro de {self.request.clinic} "
+            f"({start:%d/%m/%Y} a {end:%d/%m/%Y})."
+        )
         return context
 
 
@@ -75,8 +87,24 @@ class ReceivableListView(ClinicViewMixin, ListView):
         return queryset.order_by("due_date")
 
     def get_context_data(self, **kwargs):
+        from django.db.models import Count
+        from django.urls import reverse
+
         context = super().get_context_data(**kwargs)
         context["status_choices"] = FinancialStatus.choices
+
+        by_status = dict(
+            ReceivableAccount.objects.values_list("status").annotate(total=Count("id"))
+        )
+        context["summary"] = {
+            "total": sum(by_status.values()),
+            "paid": by_status.get(FinancialStatus.PAID, 0),
+            "pending": by_status.get(FinancialStatus.PENDING, 0)
+            + by_status.get(FinancialStatus.PARTIAL, 0),
+            "overdue": by_status.get(FinancialStatus.OVERDUE, 0),
+        }
+        context["pdf_url"] = reverse("reports:export", args=["contas_receber", "pdf"])
+        context["excel_url"] = reverse("reports:export", args=["contas_receber", "xlsx"])
         return context
 
 
@@ -242,14 +270,36 @@ class PayableListView(ClinicViewMixin, ListView):
         status = self.request.GET.get("status", "")
         if status:
             queryset = queryset.filter(status=status)
+        category = self.request.GET.get("category", "")
+        if category:
+            queryset = queryset.filter(category_id=category)
         search = self.request.GET.get("q", "").strip()
         if search:
             queryset = queryset.filter(supplier_name__icontains=search)
         return queryset.order_by("due_date")
 
     def get_context_data(self, **kwargs):
+        from django.db.models import Count
+        from django.urls import reverse
+
         context = super().get_context_data(**kwargs)
         context["status_choices"] = FinancialStatus.choices
+        context["category_choices"] = FinancialCategory.objects.filter(
+            kind=FinancialCategory.Kind.EXPENSE, is_active=True
+        ).order_by("name")
+
+        by_status = dict(
+            PayableAccount.objects.values_list("status").annotate(total=Count("id"))
+        )
+        context["summary"] = {
+            "total": sum(by_status.values()),
+            "paid": by_status.get(FinancialStatus.PAID, 0),
+            "pending": by_status.get(FinancialStatus.PENDING, 0)
+            + by_status.get(FinancialStatus.PARTIAL, 0),
+            "overdue": by_status.get(FinancialStatus.OVERDUE, 0),
+        }
+        context["pdf_url"] = reverse("reports:export", args=["contas_pagar", "pdf"])
+        context["excel_url"] = reverse("reports:export", args=["contas_pagar", "xlsx"])
         return context
 
 

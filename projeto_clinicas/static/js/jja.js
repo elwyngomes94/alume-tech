@@ -352,6 +352,15 @@ window.JJA.shareOnWhatsApp = function (text) {
     });
   }
 
+  // --- tooltips do Bootstrap (title="..." em botoes de icone) -------------
+  if (window.bootstrap && window.bootstrap.Tooltip) {
+    document.querySelectorAll('[title]:not([data-bs-toggle])').forEach(function (el) {
+      if (el.closest(".jja-autocomplete-results")) return;
+      el.setAttribute("data-bs-toggle", "tooltip");
+      new bootstrap.Tooltip(el);
+    });
+  }
+
   // --- atalho de busca (tecla /) ------------------------------------------
   document.addEventListener("keydown", function (event) {
     if (event.key === "/" && !/input|textarea|select/i.test(event.target.tagName)) {

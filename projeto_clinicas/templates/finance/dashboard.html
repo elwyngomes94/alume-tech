@@ -24,6 +24,9 @@
 {% endblock %}
 
 {% block content %}
+<div class="mb-3">
+  {% include "includes/report_actions.html" with pdf_url=pdf_url excel_url=excel_url whatsapp_text=whatsapp_text %}
+</div>
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3">
     <div class="jja-stat">

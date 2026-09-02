@@ -20,8 +20,19 @@
             <li>{{ plan.max_patients }} pacientes</li>
             <li>{{ plan.max_storage_mb }} MB de armazenamento</li>
           </ul>
+          <p class="small text-body-secondary mb-1">Modulos incluidos:</p>
+          <ul class="list-unstyled small mb-3">
+            {% for label in plan.module_labels %}
+              <li><i class="bi bi-check-lg text-success"></i> {{ label }}</li>
+            {% empty %}
+              <li class="text-body-secondary"><i class="bi bi-dash-lg"></i> Nenhum modulo selecionado</li>
+            {% endfor %}
+          </ul>
           <p class="small text-body-secondary">{{ plan.subscribers }} assinante(s)</p>
-          <a class="btn btn-sm btn-outline-secondary w-100" href="{% url 'platform:plan-update' plan.pk %}">Editar</a>
+          <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary flex-grow-1" href="{% url 'platform:plan-detail' plan.pk %}">Ver</a>
+            <a class="btn btn-sm btn-outline-secondary flex-grow-1" href="{% url 'platform:plan-update' plan.pk %}">Editar</a>
+          </div>
         </div>
       </div>
     </div>

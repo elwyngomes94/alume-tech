@@ -70,6 +70,42 @@ class ClinicPermissionMixin(ClinicRequiredMixin):
         return None
 
 
+class RequireModuleMixin:
+    """
+    Exige que a clinica ativa tenha um modulo habilitado -- o teto de quais
+    modulos uma clinica pode habilitar e o plano contratado (ver
+    ``apps.clinics.forms.ClinicForm``), mas o controle de acesso de
+    verdade e aqui: sem isso, desabilitar um modulo so escondia o item do
+    menu, sem bloquear a URL/backend.
+
+    Use junto com ``ClinicViewMixin`` (antes dele na lista de heranca) e
+    defina ``required_module`` com o codename do modulo (ver
+    ``apps.clinics.modules.MODULE_CATALOG``)::
+
+        class ProductListView(RequireModuleMixin, ClinicViewMixin, ListView):
+            required_module = "inventory"
+    """
+
+    required_module: Optional[str] = None
+
+    def dispatch(self, request, *args, **kwargs):
+        clinic = getattr(request, "clinic", None)
+        if self.required_module and clinic is not None and not clinic.has_module(
+            self.required_module
+        ):
+            from apps.clinics.modules import module_label
+
+            log_denied(
+                f"Modulo '{self.required_module}' nao disponivel no plano em {request.path}",
+                request=request,
+            )
+            raise PermissionDenied(
+                f'O recurso "{module_label(self.required_module)}" nao esta disponivel '
+                "no plano contratado por esta clinica."
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+
 class ClinicViewMixin(ClinicPermissionMixin):
     """
     Base das views do painel da clinica.

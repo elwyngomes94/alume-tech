@@ -1,49 +1,168 @@
 {% extends "layouts/platform.html" %}
 
 {% block page_title %}Clinicas{% endblock %}
-{% block page_actions %}<a class="btn btn-primary" href="{% url 'platform:clinic-create' %}"><i class="bi bi-plus-lg"></i> Nova clinica</a>{% endblock %}
+{% block page_subtitle %}{{ summary.total }} clinica(s) cadastrada(s){% endblock %}
+{% block page_actions %}
+  <button class="btn btn-outline-secondary" type="button" id="jjaClinicViewToggle">
+    <i class="bi bi-grid-3x3-gap"></i> <span id="jjaClinicViewToggleLabel">Ver em cards</span>
+  </button>
+  <a class="btn btn-primary" href="{% url 'platform:clinic-create' %}"><i class="bi bi-plus-lg"></i> Nova clinica</a>
+{% endblock %}
 
 {% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Total de clinicas</div>
+      <div class="value">{{ summary.total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Ativas</div>
+      <div class="value text-success">{{ summary.active }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Em avaliacao (trial)</div>
+      <div class="value text-info">{{ summary.trial }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Inativas/suspensas</div>
+      <div class="value text-danger">{{ summary.inactive }}</div>
+    </div>
+  </div>
+</div>
+
 <form class="jja-filters row g-2" method="get">
   <div class="col-md-4"><input class="form-control" type="search" name="q" placeholder="Nome, CNPJ ou cidade" value="{{ request.GET.q|default:'' }}"></div>
-  <div class="col-md-3">
+  <div class="col-md-2">
     <select class="form-select" name="status">
       <option value="">Todos os status</option>
       {% for value, label in status_choices %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </div>
-  <div class="col-md-3">
+  <div class="col-md-2">
     <select class="form-select" name="type">
       <option value="">Todos os tipos</option>
       {% for value, label in type_choices %}<option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </div>
+  <div class="col-md-2">
+    <select class="form-select" name="plan">
+      <option value="">Todos os planos</option>
+      {% for plan in plan_choices %}<option value="{{ plan.pk }}" {% if request.GET.plan == plan.pk|stringformat:"s" %}selected{% endif %}>{{ plan.name }}</option>{% endfor %}
+    </select>
+  </div>
   <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
 </form>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
-      <thead><tr><th>Clinica</th><th>Tipo</th><th>Cidade</th><th>Plano</th><th>Status</th></tr></thead>
-      <tbody>
-        {% for clinic in clinics %}
-          <tr>
-            <td><a href="{% url 'platform:clinic-detail' clinic.pk %}">{{ clinic }}</a></td>
-            <td class="small">{{ clinic.get_clinic_type_display }}</td>
-            <td class="small">{{ clinic.city }}/{{ clinic.state }}</td>
-            <td class="small">{{ clinic.subscription.plan|default:"-" }}</td>
-            <td>
+{% if clinics %}
+  <div id="jjaClinicTableView">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Clinica</th><th>Cidade</th><th>Plano</th><th>Usuarios</th><th>Pacientes</th><th>Ultima atividade</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for clinic in clinics %}
+              <tr>
+                <td><a href="{% url 'platform:clinic-detail' clinic.pk %}">{{ clinic }}</a></td>
+                <td class="small">{{ clinic.city }}/{{ clinic.state }}</td>
+                <td class="small">{{ clinic.subscription.plan|default:"-" }}</td>
+                <td>{{ clinic.total_users }}</td>
+                <td>{{ clinic.total_patients }}</td>
+                <td class="small text-body-secondary">{{ clinic.last_activity|date:"d/m/Y H:i"|default:"-" }}</td>
+                <td>
+                  <span class="badge text-bg-{% if clinic.status == 'active' %}success{% elif clinic.status == 'trial' %}info{% elif clinic.status == 'suspended' %}warning{% else %}danger{% endif %}">
+                    {{ clinic.get_status_display }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'platform:clinic-detail' clinic.pk %}" title="Visualizar"><i class="bi bi-eye"></i></a>
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'platform:clinic-update' clinic.pk %}" title="Editar"><i class="bi bi-pencil"></i></a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="jjaClinicCardView" class="row g-3 d-none">
+    {% for clinic in clinics %}
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h2 class="h6 mb-0"><a href="{% url 'platform:clinic-detail' clinic.pk %}">{{ clinic }}</a></h2>
               <span class="badge text-bg-{% if clinic.status == 'active' %}success{% elif clinic.status == 'trial' %}info{% elif clinic.status == 'suspended' %}warning{% else %}danger{% endif %}">
                 {{ clinic.get_status_display }}
               </span>
-            </td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="5" class="text-body-secondary">Nenhuma clinica encontrada.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </div>
+            <p class="small text-body-secondary mb-2">
+              {{ clinic.document|default:"CNPJ nao informado" }}<br>
+              {{ clinic.phone|default:"-" }} &middot; {{ clinic.city }}/{{ clinic.state }}
+            </p>
+            <div class="d-flex gap-3 small mb-3">
+              <span><i class="bi bi-people"></i> {{ clinic.total_users }} usuario(s)</span>
+              <span><i class="bi bi-person-hearts"></i> {{ clinic.total_patients }} paciente(s)</span>
+            </div>
+            <p class="small text-body-secondary mb-3">
+              Plano: <strong>{{ clinic.subscription.plan|default:"Sem plano" }}</strong><br>
+              Ultima atividade: {{ clinic.last_activity|date:"d/m/Y H:i"|default:"-" }}
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'platform:clinic-detail' clinic.pk %}" title="Visualizar"><i class="bi bi-eye"></i> Ver</a>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'platform:clinic-update' clinic.pk %}" title="Editar"><i class="bi bi-pencil"></i> Editar</a>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'platform:user-list' %}?clinic={{ clinic.pk }}" title="Usuarios"><i class="bi bi-people"></i> Usuarios</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
   </div>
-</div>
+{% else %}
+  <div class="card">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-hospital display-4 text-body-secondary"></i>
+      <p class="mt-3 mb-1">Nao encontramos nenhuma clinica.</p>
+      <p class="text-body-secondary small mb-3">Comece cadastrando sua primeira clinica.</p>
+      <a class="btn btn-primary" href="{% url 'platform:clinic-create' %}"><i class="bi bi-plus-lg"></i> Nova clinica</a>
+    </div>
+  </div>
+{% endif %}
 {% include "includes/pagination.html" %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    "use strict";
+    var STORAGE_KEY = "jja-clinic-view";
+    var toggle = document.getElementById("jjaClinicViewToggle");
+    var label = document.getElementById("jjaClinicViewToggleLabel");
+    var tableView = document.getElementById("jjaClinicTableView");
+    var cardView = document.getElementById("jjaClinicCardView");
+    if (!toggle || !tableView || !cardView) return;
+
+    function apply(showCards) {
+      tableView.classList.toggle("d-none", showCards);
+      cardView.classList.toggle("d-none", !showCards);
+      label.textContent = showCards ? "Ver em tabela" : "Ver em cards";
+    }
+    var showCards = false;
+    try { showCards = localStorage.getItem(STORAGE_KEY) === "cards"; } catch (e) {}
+    apply(showCards);
+
+    toggle.addEventListener("click", function () {
+      showCards = !showCards;
+      apply(showCards);
+      try { localStorage.setItem(STORAGE_KEY, showCards ? "cards" : "table"); } catch (e) {}
+    });
+  })();
+</script>
 {% endblock %}

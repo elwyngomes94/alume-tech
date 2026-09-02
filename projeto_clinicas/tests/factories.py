@@ -179,3 +179,32 @@ def make_payable(clinic: Clinic, **kwargs):
         }
         defaults.update(kwargs)
         return PayableAccount.objects.create(**defaults)
+
+
+# ---------------------------------------------------------------------------
+# Planos e organizacoes (painel do administrador da plataforma)
+# ---------------------------------------------------------------------------
+def make_plan(**kwargs):
+    from apps.billing.models import Plan
+
+    n = _seq()
+    defaults = {"name": f"Plano {n}", "modules": []}
+    defaults.update(kwargs)
+    return Plan.objects.create(**defaults)
+
+
+def make_subscription(clinic: Clinic, plan, **kwargs):
+    from apps.billing.models import Subscription
+
+    defaults = {"clinic": clinic, "plan": plan, "status": Subscription.Status.ACTIVE}
+    defaults.update(kwargs)
+    return Subscription.objects.create(**defaults)
+
+
+def make_organization(**kwargs):
+    from apps.tenants.models import Organization
+
+    n = _seq()
+    defaults = {"name": f"Organizacao {n}"}
+    defaults.update(kwargs)
+    return Organization.objects.create(**defaults)

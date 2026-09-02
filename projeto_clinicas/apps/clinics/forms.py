@@ -59,9 +59,35 @@ class ClinicForm(BootstrapFormMixin, forms.ModelForm):
             self.fields["modules"].initial = self.instance.modules or []
         self.fields["organization"].required = False
 
+        # O plano contratado e o teto dos modulos que a clinica pode
+        # habilitar -- sem plano/assinatura (ex.: clinica em avaliacao
+        # ainda sem plano definido), mantem o catalogo completo para nao
+        # travar o cadastro inicial.
+        allowed = self._plan_module_codes()
+        if allowed is not None:
+            self.fields["modules"].choices = [
+                (code, f"{label} - {desc}")
+                for code, (label, desc) in MODULE_CATALOG.items()
+                if code in allowed
+            ]
+            self.fields["modules"].help_text = (
+                "Limitado aos modulos do plano contratado."
+            )
+
+    def _plan_module_codes(self):
+        subscription = getattr(self.instance, "subscription", None)
+        if subscription is None or subscription.plan_id is None:
+            return None
+        return set(subscription.plan.modules or [])
+
     def save(self, commit=True):
         clinic = super().save(commit=False)
         selected = list(self.cleaned_data.get("modules") or [])
+        allowed = self._plan_module_codes()
+        if allowed is not None:
+            # Nunca confia so na validacao do formulario -- corta de novo
+            # aqui, mesmo que os "choices" ja tenham sido restringidos.
+            selected = [code for code in selected if code in allowed]
         if selected:
             clinic.modules = selected
         if commit:

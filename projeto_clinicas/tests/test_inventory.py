@@ -57,8 +57,11 @@ class StockServiceTests(TestCase):
 
 class StockIsolationTests(TestCase):
     def setUp(self):
-        self.clinic_a = make_clinic(trade_name="Clinica Estoque A")
-        self.clinic_b = make_clinic(trade_name="Clinica Estoque B")
+        # O modulo "inventory" e opt-in (RequireModuleMixin bloqueia sem
+        # ele) -- precisa estar habilitado nas duas clinicas para testar
+        # isolamento entre elas via view.
+        self.clinic_a = make_clinic(trade_name="Clinica Estoque A", modules=["inventory"])
+        self.clinic_b = make_clinic(trade_name="Clinica Estoque B", modules=["inventory"])
         self.admin_a = make_admin(self.clinic_a)
         self.product_a = _make_product(self.clinic_a, name="Produto A")
         self.product_b = _make_product(self.clinic_b, name="Produto B")

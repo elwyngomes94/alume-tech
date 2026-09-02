@@ -9,17 +9,18 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, ListView, UpdateView
 
-from apps.core.mixins import ClinicViewMixin
+from apps.core.mixins import ClinicViewMixin, RequireModuleMixin
 from apps.inventory import services
 from apps.inventory.forms import ProductForm, StockMovementForm
 from apps.inventory.models import Product, StockMovement
 
 
-class ProductListView(ClinicViewMixin, ListView):
+class ProductListView(RequireModuleMixin, ClinicViewMixin, ListView):
     model = Product
     template_name = "inventory/product_list.html"
     context_object_name = "products"
     required_permission = "inventory.view"
+    required_module = "inventory"
 
     def get_queryset(self):
         queryset = super().get_queryset().order_by("name")
@@ -40,11 +41,12 @@ class ProductListView(ClinicViewMixin, ListView):
         return context
 
 
-class ProductCreateView(ClinicViewMixin, CreateView):
+class ProductCreateView(RequireModuleMixin, ClinicViewMixin, CreateView):
     model = Product
     form_class = ProductForm
     template_name = "inventory/product_form.html"
     required_permission = "inventory.manage"
+    required_module = "inventory"
     success_url = reverse_lazy("inventory:product-list")
 
     def form_valid(self, form):
@@ -52,11 +54,12 @@ class ProductCreateView(ClinicViewMixin, CreateView):
         return super().form_valid(form)
 
 
-class ProductUpdateView(ClinicViewMixin, UpdateView):
+class ProductUpdateView(RequireModuleMixin, ClinicViewMixin, UpdateView):
     model = Product
     form_class = ProductForm
     template_name = "inventory/product_form.html"
     required_permission = "inventory.manage"
+    required_module = "inventory"
     success_url = reverse_lazy("inventory:product-list")
 
     def form_valid(self, form):
@@ -64,10 +67,11 @@ class ProductUpdateView(ClinicViewMixin, UpdateView):
         return super().form_valid(form)
 
 
-class StockEntryView(ClinicViewMixin, View):
+class StockEntryView(RequireModuleMixin, ClinicViewMixin, View):
     """Registra entrada de estoque (compra, ajuste, doacao etc.)."""
 
     required_permission = "inventory.manage"
+    required_module = "inventory"
 
     def get(self, request, pk):
         product = get_object_or_404(Product.objects.all(), pk=pk)
@@ -101,10 +105,11 @@ class StockEntryView(ClinicViewMixin, View):
         )
 
 
-class StockExitView(ClinicViewMixin, View):
+class StockExitView(RequireModuleMixin, ClinicViewMixin, View):
     """Registra saida de estoque (uso, venda, perda etc.)."""
 
     required_permission = "inventory.manage"
+    required_module = "inventory"
 
     def get(self, request, pk):
         product = get_object_or_404(Product.objects.all(), pk=pk)
@@ -137,11 +142,12 @@ class StockExitView(ClinicViewMixin, View):
         )
 
 
-class StockMovementListView(ClinicViewMixin, ListView):
+class StockMovementListView(RequireModuleMixin, ClinicViewMixin, ListView):
     model = StockMovement
     template_name = "inventory/movement_list.html"
     context_object_name = "movements"
     required_permission = "inventory.view"
+    required_module = "inventory"
     paginate_by = 50
 
     def get_queryset(self):

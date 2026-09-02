@@ -1,0 +1,90 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}{{ organization }}{% endblock %}
+{% block page_subtitle %}
+  {% if organization.is_active %}<span class="badge text-bg-success">Ativa</span>{% else %}<span class="badge text-bg-secondary">Inativa</span>{% endif %}
+{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'platform:organization-update' organization.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Total de clinicas</div>
+      <div class="value">{{ clinics|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Total de usuarios</div>
+      <div class="value">{{ total_users }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Total de pacientes</div>
+      <div class="value">{{ total_patients }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Documento</div>
+      <div class="value h6 mb-0">{{ organization.document|default:"-" }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Clinicas desta organizacao</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Clinica</th><th>Cidade</th><th>Plano</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for clinic in clinics %}
+          <tr>
+            <td><a href="{% url 'platform:clinic-detail' clinic.pk %}">{{ clinic }}</a></td>
+            <td class="small">{{ clinic.city }}/{{ clinic.state }}</td>
+            <td class="small">{{ clinic.subscription.plan|default:"-" }}</td>
+            <td>
+              <span class="badge text-bg-{% if clinic.status == 'active' %}success{% elif clinic.status == 'trial' %}info{% elif clinic.status == 'suspended' %}warning{% else %}danger{% endif %}">
+                {{ clinic.get_status_display }}
+              </span>
+            </td>
+            <td class="text-end">
+              <form method="post" action="{% url 'platform:organization-remove-clinic' organization.pk clinic.pk %}"
+                    data-confirm="Remover {{ clinic }} desta organizacao?">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" type="submit" title="Remover"><i class="bi bi-x-lg"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-body-secondary">Nenhuma clinica associada ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if available_clinics %}
+    <div class="card-body border-top">
+      <form method="post" action="{% url 'platform:organization-add-clinic' organization.pk %}" class="row g-2">
+        {% csrf_token %}
+        <div class="col-md-8">
+          <select class="form-select" name="clinic" required>
+            <option value="">Selecione uma clinica para associar...</option>
+            {% for clinic in available_clinics %}
+              <option value="{{ clinic.pk }}">{{ clinic }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4 d-grid">
+          <button class="btn btn-outline-primary" type="submit"><i class="bi bi-plus-lg"></i> Associar clinica</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

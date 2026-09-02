@@ -1,0 +1,83 @@
+{% extends "layouts/platform.html" %}
+
+{% block page_title %}{{ plan.name }}{% endblock %}
+{% block page_subtitle %}{{ plan.get_tier_display }}{% endblock %}
+{% block page_actions %}
+  <a class="btn btn-outline-secondary" href="{% url 'platform:plan-update' plan.pk %}"><i class="bi bi-pencil"></i> Editar</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Mensal</div>
+      <div class="value">R$ {{ plan.monthly_price }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Anual</div>
+      <div class="value">R$ {{ plan.yearly_price }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Assinantes</div>
+      <div class="value">{{ subscriptions|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Status</div>
+      <div class="value h6 mb-0">{% if plan.is_active %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Limites</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between"><span>Profissionais</span><strong>{{ plan.max_professionals }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Usuarios</span><strong>{{ plan.max_users }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Pacientes</span><strong>{{ plan.max_patients }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Armazenamento</span><strong>{{ plan.max_storage_mb }} MB</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Clinicas</span><strong>{{ plan.max_clinics }}</strong></li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Modulos incluidos</div>
+      <ul class="list-group list-group-flush">
+        {% for label in plan.module_labels %}
+          <li class="list-group-item"><i class="bi bi-check-lg text-success"></i> {{ label }}</li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">Nenhum modulo selecionado.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Clinicas assinantes</div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Clinica</th><th>Status da assinatura</th><th>Ciclo</th></tr></thead>
+      <tbody>
+        {% for subscription in subscriptions %}
+          <tr>
+            <td><a href="{% url 'platform:clinic-detail' subscription.clinic.pk %}">{{ subscription.clinic }}</a></td>
+            <td><span class="badge text-bg-light border">{{ subscription.get_status_display }}</span></td>
+            <td class="small">{{ subscription.get_cycle_display }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="text-body-secondary">Nenhuma clinica assinante ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -17,6 +17,7 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 
 from apps.accounts.forms import AdminSetPasswordForm, BootstrapFormMixin
 from apps.accounts.models import LoginAttempt, User
+from apps.accounts.permissions import Roles
 from apps.audit.models import AuditAction, AuditLog
 from apps.audit.services import log_action
 from apps.billing.models import Invoice, Plan, Subscription, SystemExpense
@@ -109,7 +110,20 @@ class ClinicListView(UnscopedMixin, ListView):
     unscoped_reason = "listagem de clinicas"
 
     def get_queryset(self):
-        queryset = Clinic.objects.select_related("organization", "subscription__plan")
+        from django.db.models import Max, OuterRef, Subquery
+
+        last_activity = AuditLog.objects.filter(clinic=OuterRef("pk")).order_by(
+            "-created_at"
+        ).values("created_at")[:1]
+
+        queryset = (
+            Clinic.objects.select_related("organization", "subscription__plan")
+            .annotate(
+                total_users=Count("memberships", distinct=True),
+                total_patients=Count("patients_patient_set", distinct=True),
+                last_activity=Subquery(last_activity),
+            )
+        )
         search = self.request.GET.get("q", "").strip()
         if search:
             queryset = queryset.filter(
@@ -124,12 +138,27 @@ class ClinicListView(UnscopedMixin, ListView):
         clinic_type = self.request.GET.get("type", "")
         if clinic_type:
             queryset = queryset.filter(clinic_type=clinic_type)
+        plan = self.request.GET.get("plan", "")
+        if plan:
+            queryset = queryset.filter(subscription__plan_id=plan)
         return queryset.order_by("trade_name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["status_choices"] = Clinic.Status.choices
         context["type_choices"] = ClinicType.CHOICES
+        context["plan_choices"] = Plan.objects.filter(is_active=True).order_by("name")
+
+        status_counts = dict(
+            Clinic.objects.values_list("status").annotate(total=Count("id"))
+        )
+        context["summary"] = {
+            "total": sum(status_counts.values()),
+            "active": status_counts.get(Clinic.Status.ACTIVE, 0),
+            "inactive": status_counts.get(Clinic.Status.SUSPENDED, 0)
+            + status_counts.get(Clinic.Status.CANCELED, 0),
+            "trial": status_counts.get(Clinic.Status.TRIAL, 0),
+        }
         return context
 
 
@@ -281,23 +310,56 @@ class ClinicImpersonateView(UnscopedMixin, View):
 
 
 class PlatformUserListView(UnscopedMixin, ListView):
-    model = User
+    """
+    Lista global de usuarios, organizada por vinculo com clinica (um
+    usuario com acesso a 2 clinicas aparece uma vez em cada uma -- a
+    listagem e sobre `ClinicMembership`, nao sobre `User`, exatamente por
+    isso). Quando uma clinica e selecionada no filtro, mostra so os
+    vinculos dela; sem filtro, agrupa por clinica no template.
+    """
+
+    model = ClinicMembership
     template_name = "platform/user_list.html"
-    context_object_name = "users"
-    paginate_by = 30
+    context_object_name = "memberships"
+    paginate_by = 50
     unscoped_reason = "listagem global de usuarios"
 
     def get_queryset(self):
-        queryset = User.objects.prefetch_related("clinic_memberships__clinic")
+        queryset = ClinicMembership.objects.select_related("user", "clinic")
         search = self.request.GET.get("q", "").strip()
         if search:
             queryset = queryset.filter(
-                Q(full_name__icontains=search) | Q(email__icontains=search)
+                Q(user__full_name__icontains=search) | Q(user__email__icontains=search)
             )
         role = self.request.GET.get("role", "")
         if role:
             queryset = queryset.filter(role=role)
-        return queryset.order_by("full_name")
+        clinic = self.request.GET.get("clinic", "")
+        if clinic:
+            queryset = queryset.filter(clinic_id=clinic)
+        status = self.request.GET.get("status", "")
+        if status == "active":
+            queryset = queryset.filter(is_active=True, user__is_active=True)
+        elif status == "inactive":
+            queryset = queryset.filter(Q(is_active=False) | Q(user__is_active=False))
+        return queryset.order_by("clinic__trade_name", "user__full_name")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["role_choices"] = Roles.CHOICES
+        context["clinic_choices"] = Clinic.objects.order_by("trade_name")
+
+        base_users = User.objects.filter(role__in=[r for r, _ in Roles.CHOICES])
+        by_role = dict(base_users.values_list("role").annotate(total=Count("id")))
+        context["summary"] = {
+            "total": base_users.count(),
+            "active": base_users.filter(is_active=True).count(),
+            "inactive": base_users.filter(is_active=False).count(),
+            "admins": by_role.get(Roles.CLINIC_ADMIN, 0),
+            "receptionists": by_role.get(Roles.RECEPTIONIST, 0),
+            "professionals": by_role.get(Roles.PROFESSIONAL, 0),
+        }
+        return context
 
 
 class PlatformUserToggleView(UnscopedMixin, View):
@@ -485,6 +547,20 @@ class PlanListView(UnscopedMixin, ListView):
         return Plan.objects.annotate(subscribers=Count("subscriptions")).order_by("monthly_price")
 
 
+class PlanDetailView(UnscopedMixin, DetailView):
+    model = Plan
+    template_name = "platform/plan_detail.html"
+    context_object_name = "plan"
+    unscoped_reason = "consulta administrativa de plano"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["subscriptions"] = self.object.subscriptions.select_related("clinic").order_by(
+            "clinic__trade_name"
+        )
+        return context
+
+
 class PlanCreateView(UnscopedMixin, CreateView):
     model = Plan
     form_class = PlanForm
@@ -525,6 +601,109 @@ class OrganizationListView(UnscopedMixin, ListView):
 
     def get_queryset(self):
         return Organization.objects.annotate(total_clinics=Count("clinics")).order_by("name")
+
+
+class OrganizationForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Organization
+        fields = ["name", "trade_name", "document", "contact_email", "contact_phone", "is_active"]
+
+
+class OrganizationCreateView(UnscopedMixin, CreateView):
+    model = Organization
+    form_class = OrganizationForm
+    template_name = "platform/organization_form.html"
+    unscoped_reason = "cadastro de organizacao"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_action(
+            AuditAction.CREATE,
+            obj=self.object,
+            description="Organizacao cadastrada pelo painel da plataforma",
+            request=self.request,
+        )
+        messages.success(self.request, "Organizacao criada.")
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy("platform:organization-detail", args=[self.object.pk])
+
+
+class OrganizationUpdateView(UnscopedMixin, UpdateView):
+    model = Organization
+    form_class = OrganizationForm
+    template_name = "platform/organization_form.html"
+    unscoped_reason = "edicao de organizacao"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Organizacao atualizada.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("platform:organization-detail", args=[self.object.pk])
+
+
+class OrganizationDetailView(UnscopedMixin, DetailView):
+    model = Organization
+    template_name = "platform/organization_detail.html"
+    context_object_name = "organization"
+    unscoped_reason = "consulta administrativa de organizacao"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        clinics = self.object.clinics.select_related("subscription__plan").order_by("trade_name")
+        context["clinics"] = clinics
+        context["total_users"] = ClinicMembership.objects.filter(
+            clinic__organization=self.object
+        ).count()
+        from apps.patients.models import Patient
+
+        context["total_patients"] = Patient.objects.filter(
+            clinic__organization=self.object
+        ).count()
+        context["available_clinics"] = Clinic.objects.filter(
+            organization__isnull=True
+        ).order_by("trade_name")
+        return context
+
+
+class OrganizationAddClinicView(UnscopedMixin, View):
+    unscoped_reason = "associar clinica a organizacao"
+
+    def post(self, request, pk):
+        organization = get_object_or_404(Organization, pk=pk)
+        clinic = get_object_or_404(Clinic, pk=request.POST.get("clinic"))
+        clinic.organization = organization
+        clinic.save(update_fields=["organization", "updated_at"])
+        log_action(
+            AuditAction.UPDATE,
+            obj=clinic,
+            description=f"Clinica associada a organizacao '{organization}'",
+            request=request,
+            clinic=clinic,
+        )
+        messages.success(request, f"{clinic} associada a {organization}.")
+        return redirect("platform:organization-detail", pk=pk)
+
+
+class OrganizationRemoveClinicView(UnscopedMixin, View):
+    unscoped_reason = "remover clinica de organizacao"
+
+    def post(self, request, pk, clinic_pk):
+        organization = get_object_or_404(Organization, pk=pk)
+        clinic = get_object_or_404(Clinic, pk=clinic_pk, organization=organization)
+        clinic.organization = None
+        clinic.save(update_fields=["organization", "updated_at"])
+        log_action(
+            AuditAction.UPDATE,
+            obj=clinic,
+            description=f"Clinica removida da organizacao '{organization}'",
+            request=request,
+            clinic=clinic,
+        )
+        messages.success(request, f"{clinic} removida de {organization}.")
+        return redirect("platform:organization-detail", pk=pk)
 
 
 # ---------------------------------------------------------------------------

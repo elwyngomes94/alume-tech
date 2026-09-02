@@ -35,9 +35,31 @@ urlpatterns = [
     # Planos e assinaturas
     path("planos/", views.PlanListView.as_view(), name="plan-list"),
     path("planos/novo/", views.PlanCreateView.as_view(), name="plan-create"),
+    path("planos/<uuid:pk>/", views.PlanDetailView.as_view(), name="plan-detail"),
     path("planos/<uuid:pk>/editar/", views.PlanUpdateView.as_view(), name="plan-update"),
     path("assinaturas/", views.SubscriptionListView.as_view(), name="subscription-list"),
     path("organizacoes/", views.OrganizationListView.as_view(), name="organization-list"),
+    path("organizacoes/nova/", views.OrganizationCreateView.as_view(), name="organization-create"),
+    path(
+        "organizacoes/<uuid:pk>/",
+        views.OrganizationDetailView.as_view(),
+        name="organization-detail",
+    ),
+    path(
+        "organizacoes/<uuid:pk>/editar/",
+        views.OrganizationUpdateView.as_view(),
+        name="organization-update",
+    ),
+    path(
+        "organizacoes/<uuid:pk>/adicionar-clinica/",
+        views.OrganizationAddClinicView.as_view(),
+        name="organization-add-clinic",
+    ),
+    path(
+        "organizacoes/<uuid:pk>/remover-clinica/<uuid:clinic_pk>/",
+        views.OrganizationRemoveClinicView.as_view(),
+        name="organization-remove-clinic",
+    ),
     # Financeiro do sistema
     path("financeiro/", views.FinanceDashboardView.as_view(), name="finance-dashboard"),
     path("financeiro/despesas/", views.SystemExpenseListView.as_view(), name="system-expense-list"),

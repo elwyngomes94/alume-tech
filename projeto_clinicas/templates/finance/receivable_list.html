@@ -1,17 +1,46 @@
 {% extends "layouts/app.html" %}
 
 {% block page_title %}Contas a receber{% endblock %}
+{% block page_subtitle %}{{ summary.total }} conta(s){% endblock %}
 
 {% block page_actions %}
-  <a class="btn btn-outline-secondary" href="{% url 'reports:detail' 'contas_receber' %}">
-    <i class="bi bi-bar-chart"></i> Relatorio
-  </a>
   {% if perms_clinic.finance_add %}
     <a class="btn btn-primary" href="{% url 'finance:receivable-create' %}"><i class="bi bi-plus-lg"></i> Nova conta</a>
   {% endif %}
 {% endblock %}
 
 {% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Total</div>
+      <div class="value">{{ summary.total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Pagas</div>
+      <div class="value text-success">{{ summary.paid }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Pendentes</div>
+      <div class="value text-warning">{{ summary.pending }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Vencidas</div>
+      <div class="value text-danger">{{ summary.overdue }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-3">
+  {% include "includes/report_actions.html" with pdf_url=pdf_url excel_url=excel_url whatsapp_text="Segue o relatorio de contas a receber." %}
+</div>
+
 <form class="jja-filters row g-2" method="get">
   <div class="col-md-5"><input class="form-control" type="search" name="q" placeholder="Paciente ou descricao" value="{{ request.GET.q|default:'' }}"></div>
   <div class="col-md-4">
@@ -25,29 +54,39 @@
   <div class="col-md-3 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
 </form>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
-      <thead><tr><th>Paciente/Descricao</th><th>Vencimento</th><th>Valor</th><th>Saldo</th><th>Status</th></tr></thead>
-      <tbody>
-        {% for item in receivables %}
-          <tr>
-            <td><a href="{% url 'finance:receivable-detail' item.pk %}">{{ item.patient.display_name|default:item.description }}</a></td>
-            <td class="small">{{ item.due_date|date:"d/m/Y" }}</td>
-            <td>R$ {{ item.net_amount|floatformat:2 }}</td>
-            <td>R$ {{ item.balance|floatformat:2 }}</td>
-            <td>
-              <span class="badge text-bg-{% if item.status == 'paid' %}success{% elif item.status == 'overdue' %}danger{% elif item.status == 'partial' %}warning{% elif item.status == 'canceled' %}secondary{% else %}light border{% endif %}">
-                {{ item.get_status_display }}
-              </span>
-            </td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="5" class="text-body-secondary">Nenhuma conta a receber encontrada.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if receivables %}
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Paciente/Descricao</th><th>Vencimento</th><th>Valor</th><th>Saldo</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for item in receivables %}
+            <tr>
+              <td><a href="{% url 'finance:receivable-detail' item.pk %}">{{ item.patient.display_name|default:item.description }}</a></td>
+              <td class="small">{{ item.due_date|date:"d/m/Y" }}</td>
+              <td>R$ {{ item.net_amount|floatformat:2 }}</td>
+              <td>R$ {{ item.balance|floatformat:2 }}</td>
+              <td>
+                <span class="badge text-bg-{% if item.status == 'paid' %}success{% elif item.status == 'overdue' %}danger{% elif item.status == 'partial' %}warning{% elif item.status == 'canceled' %}secondary{% else %}light border{% endif %}">
+                  {{ item.get_status_display }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
+{% else %}
+  <div class="card">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-receipt-cutoff display-4 text-body-secondary"></i>
+      <p class="mt-3 mb-1">Nenhuma conta a receber encontrada.</p>
+      {% if perms_clinic.finance_add %}
+        <a class="btn btn-primary mt-2" href="{% url 'finance:receivable-create' %}"><i class="bi bi-plus-lg"></i> Nova conta</a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
 {% include "includes/pagination.html" %}
 {% endblock %}
