@@ -121,6 +121,18 @@ def notify_appointment_event(appointment, event: str) -> None:
             body=f"{title}: {message}",
         )
 
+    if event == "called":
+        ticket = getattr(appointment, "call_ticket", None)
+        if ticket is not None and ticket.push_subscriptions.exists():
+            from apps.notifications.push import dispatch_ticket_push
+
+            dispatch_ticket_push(
+                ticket,
+                title="E a sua vez!",
+                body=f"Senha {ticket.ticket_number} - dirija-se ao atendimento.",
+                url=reverse("calling:patient-ticket", args=[ticket.access_token]),
+            )
+
 
 def notify_examination_result(result) -> None:
     patient = result.request.patient

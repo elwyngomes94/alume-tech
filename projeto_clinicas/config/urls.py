@@ -6,6 +6,7 @@ Mapa de URLs do JJA System.
     /app/             -> painel operacional da clinica ativa
     /platform/        -> administracao global (SUPERADMIN)
     /patient/         -> portal do paciente
+    /chamada/<token>/ -> pagina publica da senha de chamada (sem login)
     /api/v1/          -> API REST versionada
 """
 from django.conf import settings
@@ -35,6 +36,7 @@ urlpatterns = [
     path("app/relatorios/", include("apps.reports.urls", namespace="reports")),
     path("app/lgpd/", include("apps.lgpd.urls", namespace="lgpd")),
     path("app/auditoria/", include("apps.audit.urls", namespace="audit")),
+    path("", include("apps.calling.urls", namespace="calling")),
     path("platform/", include("apps.platform_admin.urls", namespace="platform")),
     path("patient/", include("apps.portal.urls", namespace="portal")),
     path("api/v1/", include(("apps.api.urls", "api"), namespace="v1")),

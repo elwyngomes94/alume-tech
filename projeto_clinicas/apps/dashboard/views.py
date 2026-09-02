@@ -149,6 +149,32 @@ class ClinicDashboardView(ClinicViewMixin, TemplateView):
                 item["method__name"] or "Nao informado" for item in by_method
             ]
             context["chart_method_values"] = [item["total"] for item in by_method]
+
+        if self.request.clinic.has_module_calling:
+            from apps.calling.models import CallTicket
+
+            today_tickets = CallTicket.objects.filter(created_at__date=today).select_related(
+                "appointment"
+            )
+            wait_minutes = [
+                (t.appointment.called_at - t.appointment.checked_in_at).total_seconds() / 60
+                for t in today_tickets
+                if t.appointment.called_at and t.appointment.checked_in_at
+            ]
+            resolved = [
+                t
+                for t in today_tickets
+                if t.appointment.status in (Appointment.Status.COMPLETED, Appointment.Status.NO_SHOW)
+            ]
+            no_show = sum(1 for t in resolved if t.appointment.status == Appointment.Status.NO_SHOW)
+            context["calling_kpis"] = {
+                "waiting_now": sum(
+                    1 for t in today_tickets if t.appointment.status == Appointment.Status.CHECKED_IN
+                ),
+                "avg_wait_minutes": round(sum(wait_minutes) / len(wait_minutes)) if wait_minutes else 0,
+                "no_show_rate": round(100 * no_show / len(resolved)) if resolved else 0,
+                "total_today": today_tickets.count(),
+            }
         return context
 
 

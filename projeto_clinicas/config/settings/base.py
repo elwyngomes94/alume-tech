@@ -76,6 +76,7 @@ LOCAL_APPS = [
     "apps.portal",
     "apps.lgpd",
     "apps.api",
+    "apps.calling",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -307,6 +308,29 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="nao-responda@jjasystem.com.br")
+
+# ---------------------------------------------------------------------------
+# Web Push (VAPID) -- chamada de pacientes
+# ---------------------------------------------------------------------------
+# Sem chaves configuradas, o envio de push e apenas ignorado (mesmo padrao
+# fail-soft do Redis/Celery acima) -- nunca quebra a chamada do paciente.
+# As chaves abaixo sao de DESENVOLVIMENTO; producao deve configurar as suas
+# proprias via variaveis de ambiente (ver nota de deploy).
+VAPID_PUBLIC_KEY = env(
+    "VAPID_PUBLIC_KEY",
+    default="BDn7n3k5LTcOAcnpg3wON-Hp45TBizis-gV_xuoFgHHF4EFvn8YHDINQtDEu8gjm3bWnJTqKtmrTiSNGH_KENGU",
+)
+VAPID_PRIVATE_KEY = env(
+    "VAPID_PRIVATE_KEY",
+    default=(
+        "-----BEGIN PRIVATE KEY-----\n"
+        "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQghlQCTAU25P37Fd4G\n"
+        "t4+mXBSx84O3oBpkQF8peqTGyEuhRANCAAQ5+595OS03DgHJ6YN8Djfh6eOUwYs4\n"
+        "rPoFf8bqBYBxxeBBb5/GBwyDULQxLvII5t21pyU6irZq04kjRh/yhDRl\n"
+        "-----END PRIVATE KEY-----\n"
+    ),
+)
+VAPID_CLAIMS_EMAIL = env("VAPID_CLAIMS_EMAIL", default="contato@alumetech.com.br")
 
 # ---------------------------------------------------------------------------
 # Django REST Framework

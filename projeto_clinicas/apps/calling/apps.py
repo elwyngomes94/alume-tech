@@ -1,0 +1,8 @@
+from django.apps import AppConfig
+
+
+class CallingConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.calling"
+    label = "calling"
+    verbose_name = "Chamada de pacientes"

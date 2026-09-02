@@ -1,0 +1,22 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Configuracao da chamada de pacientes{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'calling:panel-tv' %}"><i class="bi bi-tv"></i> Abrir painel de TV</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form.html" with form=form %}
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Salvar</button>
+        <a class="btn btn-light" href="{% url 'dashboard:reception' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

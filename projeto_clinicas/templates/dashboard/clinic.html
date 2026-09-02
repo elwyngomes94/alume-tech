@@ -114,6 +114,36 @@
 </div>
 {% endif %}
 
+{% if calling_kpis %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Aguardando agora</div>
+      <div class="value">{{ calling_kpis.waiting_now }}</div>
+      <a class="hint" href="{% url 'calling:panel-tv' %}">ver painel</a>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Espera media hoje</div>
+      <div class="value">{{ calling_kpis.avg_wait_minutes }} min</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Nao comparecimento</div>
+      <div class="value">{{ calling_kpis.no_show_rate }}%</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="jja-stat">
+      <div class="label">Senhas hoje</div>
+      <div class="value">{{ calling_kpis.total_today }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3">
   <div class="col-lg-8">
     <div class="card h-100">

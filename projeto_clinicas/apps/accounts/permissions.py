@@ -112,6 +112,10 @@ PERMISSION_CATALOG: List[tuple] = [
     # Estoque
     ("inventory.view", "Visualizar produtos e movimentacoes de estoque", "Estoque"),
     ("inventory.manage", "Cadastrar produtos e lancar entradas/saidas de estoque", "Estoque"),
+    # Chamada de pacientes
+    ("calling.manage_queue", "Chamar, rechamar e gerenciar a fila de senhas", "Chamada de pacientes"),
+    ("calling.view_panel", "Abrir o painel de TV da sala de espera", "Chamada de pacientes"),
+    ("calling.configure", "Configurar a chamada de pacientes", "Chamada de pacientes"),
 ]
 
 ALL_PERMISSIONS: Set[str] = {codename for codename, _label, _group in PERMISSION_CATALOG}
@@ -148,6 +152,8 @@ DEFAULT_ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "report.view",
         "service.manage",
         "room.manage",
+        "calling.manage_queue",
+        "calling.view_panel",
     },
     Roles.PROFESSIONAL: {
         "clinic.view",
@@ -172,6 +178,8 @@ DEFAULT_ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "document.add",
         "document.download",
         "report.view",
+        "calling.manage_queue",
+        "calling.view_panel",
     },
     Roles.PATIENT: set(),  # o portal do paciente usa regras proprias de escopo
 }

@@ -10,3 +10,5 @@ celery>=5.4
 redis>=5.0
 gunicorn>=22.0
 requests>=2.32
+qrcode[pil]>=7.4
+pywebpush>=2.0

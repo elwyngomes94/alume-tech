@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Senha {{ ticket.ticket_number }} - {{ ticket.clinic.trade_name }}{% endblock %}
+
+{% block body_class %}jja-ticket-body{% endblock %}
+
+{% block extra_head %}
+<link rel="manifest" href="{% static 'manifest.json' %}">
+<meta name="theme-color" content="#0b5ed7">
+{% endblock %}
+
+{% block body %}
+<div class="jja-ticket" id="jjaTicket">
+  <div class="jja-ticket-clinic">{{ ticket.clinic.trade_name }}</div>
+
+  <div class="jja-ticket-number">{{ ticket.ticket_number }}</div>
+
+  <div class="jja-ticket-status">
+    <span class="badge text-bg-secondary" id="jjaTicketStatusBadge">{{ appointment.get_status_display }}</span>
+  </div>
+
+  <div class="jja-ticket-details">
+    <p><i class="bi bi-person-badge"></i> <span id="jjaTicketProfessional">{{ appointment.professional.display_name }}</span></p>
+    <p id="jjaTicketRoomWrap" class="{% if not appointment.room_id %}d-none{% endif %}">
+      <i class="bi bi-door-open"></i> Sala <span id="jjaTicketRoom">{{ appointment.room.name }}</span>
+    </p>
+  </div>
+
+  <div class="jja-ticket-callout d-none" id="jjaTicketCallout">
+    <div class="jja-ticket-callout-title">É A SUA VEZ!</div>
+    <div class="jja-ticket-callout-hint">Dirija-se ao atendimento</div>
+  </div>
+
+  <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="jjaEnablePush">
+    <i class="bi bi-bell"></i> Ativar aviso no celular
+  </button>
+  <p class="jja-ticket-footnote">Mantenha esta pagina aberta. Ela atualiza sozinha.</p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  "use strict";
+  var STATUS_URL = "{% url 'calling:patient-ticket-status' ticket.access_token %}";
+  var PUSH_URL = "{% url 'calling:patient-push-subscribe' ticket.access_token %}";
+  var VAPID_PUBLIC_KEY = "{{ vapid_public_key }}";
+  var POLL_MS = 2500;
+  var wasCalled = "{{ appointment.status }}" === "called";
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    var raw = window.atob(base64);
+    var output = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+    return output;
+  }
+
+  function beep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    } catch (e) { /* navegador sem suporte a audio -- ignora */ }
+  }
+
+  function announceCalled() {
+    document.getElementById("jjaTicketCallout").classList.remove("d-none");
+    document.body.classList.add("jja-ticket-called");
+    beep();
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+    if (window.Notification && Notification.permission === "granted") {
+      new Notification("É a sua vez!", { body: "Senha {{ ticket.ticket_number }} - dirija-se ao atendimento." });
+    }
+  }
+
+  function applyStatus(data) {
+    document.getElementById("jjaTicketStatusBadge").textContent = data.status_label;
+    document.getElementById("jjaTicketProfessional").textContent = data.professional;
+    var roomWrap = document.getElementById("jjaTicketRoomWrap");
+    if (data.room) {
+      roomWrap.classList.remove("d-none");
+      document.getElementById("jjaTicketRoom").textContent = data.room;
+    } else {
+      roomWrap.classList.add("d-none");
+    }
+    if (data.e_sua_vez && !wasCalled) {
+      announceCalled();
+    }
+    wasCalled = !!data.e_sua_vez;
+    if (!data.e_sua_vez) {
+      document.getElementById("jjaTicketCallout").classList.add("d-none");
+      document.body.classList.remove("jja-ticket-called");
+    }
+  }
+
+  function poll() {
+    fetch(STATUS_URL, { credentials: "omit" })
+      .then(function (resp) { return resp.ok ? resp.json() : null; })
+      .then(function (data) { if (data) applyStatus(data); })
+      .catch(function () { /* proxima tentativa em breve */ });
+  }
+
+  poll();
+  setInterval(poll, POLL_MS);
+
+  if (wasCalled) announceCalled();
+
+  // --- Web Push -----------------------------------------------------------
+  var enableBtn = document.getElementById("jjaEnablePush");
+  function subscribePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !VAPID_PUBLIC_KEY) {
+      enableBtn.classList.add("d-none");
+      return;
+    }
+    navigator.serviceWorker.register("{% url 'calling:service-worker' %}", { scope: "/chamada/" })
+      .then(function (registration) {
+        return registration.pushManager.getSubscription().then(function (existing) {
+          if (existing) return existing;
+          return Notification.requestPermission().then(function (permission) {
+            if (permission !== "granted") return null;
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            });
+          });
+        });
+      })
+      .then(function (subscription) {
+        if (!subscription) return;
+        enableBtn.textContent = "Aviso ativado";
+        enableBtn.disabled = true;
+        return fetch(PUSH_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(subscription.toJSON()),
+        });
+      })
+      .catch(function () { /* push e reforco -- polling continua funcionando */ });
+  }
+  if (enableBtn) enableBtn.addEventListener("click", subscribePush);
+})();
+</script>
+{% endblock %}

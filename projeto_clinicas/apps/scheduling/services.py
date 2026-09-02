@@ -413,7 +413,44 @@ def change_status(
             refund_amount=refund_amount, refund_method=refund_method,
         )
         _offer_waiting_list_slot(appointment)
+    elif new_status == Appointment.Status.CHECKED_IN:
+        _create_call_ticket(appointment)
+    elif new_status == Appointment.Status.CALLED:
+        _register_ticket_call(appointment, user=user)
     return appointment
+
+
+def _create_call_ticket(appointment) -> None:
+    """
+    Gera a senha de chamada ao dar entrada -- nunca bloqueia o check-in se
+    o modulo estiver desabilitado ou algo falhar (mesmo padrao defensivo
+    ja usado para o financeiro do cancelamento e a lista de espera).
+    """
+    try:
+        if not appointment.clinic.has_module("patient_calling"):
+            return
+        from apps.calling.services import create_ticket_for_checkin
+
+        create_ticket_for_checkin(appointment)
+    except Exception:  # pragma: no cover - nunca bloqueia o check-in
+        import logging
+
+        logging.getLogger("jja.security").exception(
+            "Falha ao gerar senha de chamada para o agendamento %s", appointment.pk
+        )
+
+
+def _register_ticket_call(appointment, *, user=None) -> None:
+    try:
+        from apps.calling.services import register_call
+
+        register_call(appointment, user=user)
+    except Exception:  # pragma: no cover - nunca bloqueia a chamada
+        import logging
+
+        logging.getLogger("jja.security").exception(
+            "Falha ao registrar chamada da senha do agendamento %s", appointment.pk
+        )
 
 
 def _offer_waiting_list_slot(appointment: Appointment) -> None:

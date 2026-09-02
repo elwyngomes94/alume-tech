@@ -291,3 +291,83 @@ body.jja-simple-mode .jja-hide-simple { display: none !important; }
     scroll-behavior: auto !important;
   }
 }
+
+/* Pagina publica da senha (paciente, celular, sem login) e painel de TV. */
+@keyframes jja-ticket-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.jja-ticket-body {
+  background: #0b1f3a;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jja-ticket {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: #fff;
+}
+
+.jja-ticket-clinic {
+  font-size: .95rem;
+  opacity: .8;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.jja-ticket-number {
+  font-size: 5rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.jja-ticket-status { margin-bottom: 1.5rem; }
+
+.jja-ticket-details { font-size: 1.05rem; opacity: .9; }
+.jja-ticket-details p { margin-bottom: .35rem; }
+
+.jja-ticket-callout {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: .75rem;
+  background: #198754;
+  animation: jja-ticket-pulse 1.1s ease-in-out infinite;
+}
+
+.jja-ticket-callout-title { font-size: 1.75rem; font-weight: 800; }
+.jja-ticket-callout-hint { font-size: 1rem; opacity: .9; }
+
+.jja-ticket-footnote { font-size: .8rem; opacity: .6; margin-top: 1.5rem; }
+
+body.jja-ticket-called { background: #0d2e17; }
+
+/* Painel de TV -- mesma logica visual, em grade, para varias senhas. */
+.jja-tv-panel {
+  background: #0b1f3a;
+  min-height: 100vh;
+  color: #fff;
+  padding: 2rem;
+}
+
+.jja-tv-card {
+  background: rgba(255, 255, 255, .06);
+  border-radius: .75rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.jja-tv-card.jja-tv-called {
+  background: #198754;
+  animation: jja-ticket-pulse 1.1s ease-in-out infinite;
+}
+
+.jja-tv-ticket { font-size: 2.5rem; font-weight: 800; }

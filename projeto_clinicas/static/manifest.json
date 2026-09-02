@@ -1,0 +1,11 @@
+{
+  "name": "Senha de atendimento",
+  "short_name": "Senha",
+  "start_url": "/chamada/",
+  "display": "standalone",
+  "background_color": "#0b1f3a",
+  "theme_color": "#0b5ed7",
+  "icons": [
+    { "src": "/static/img/favicon.png", "sizes": "192x192", "type": "image/png" }
+  ]
+}

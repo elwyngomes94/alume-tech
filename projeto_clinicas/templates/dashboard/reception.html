@@ -28,6 +28,12 @@
     {% if perms_clinic.report_view %}
       <a class="btn btn-outline-secondary btn-sm" href="{% url 'reports:home' %}"><i class="bi bi-bar-chart"></i> Relatorios</a>
     {% endif %}
+    {% if active_clinic.has_module_calling and perms_clinic.calling_view_panel %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'calling:panel-tv' %}" target="_blank"><i class="bi bi-tv"></i> Painel de TV</a>
+    {% endif %}
+    {% if active_clinic.has_module_calling and perms_clinic.calling_configure %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'calling:config' %}"><i class="bi bi-gear"></i> Config. de chamada</a>
+    {% endif %}
   </div>
   {% if perms_clinic.appointment_add %}
     <div class="card-body border-top pt-3 position-relative">
@@ -140,6 +146,7 @@
               <li class="list-group-item">
                 <div class="d-flex justify-content-between align-items-start">
                   <div>
+                    {% if appointment.call_ticket %}<span class="badge text-bg-dark me-1">{{ appointment.call_ticket.ticket_number }}</span>{% endif %}
                     <div>{{ appointment.patient.display_name }}</div>
                     <div class="text-body-secondary small">{{ appointment.professional.display_name }}</div>
                   </div>
@@ -151,6 +158,11 @@
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <button class="btn btn-sm btn-primary w-100" type="submit">Chamar</button>
                   </form>
+                {% endif %}
+                {% if appointment.call_ticket %}
+                  <a class="btn btn-sm btn-outline-secondary w-100 mt-1" href="{% url 'calling:ticket-qr' appointment.call_ticket.pk %}" target="_blank">
+                    <i class="bi bi-qr-code"></i> QR da senha
+                  </a>
                 {% endif %}
               </li>
             {% empty %}
@@ -168,18 +180,28 @@
               <li class="list-group-item">
                 <div class="d-flex justify-content-between align-items-start">
                   <div>
+                    {% if appointment.call_ticket %}<span class="badge text-bg-dark me-1">{{ appointment.call_ticket.ticket_number }}{% if appointment.call_ticket.call_count > 1 %} &times;{{ appointment.call_ticket.call_count }}{% endif %}</span>{% endif %}
                     <div>{{ appointment.patient.display_name }}</div>
                     <div class="text-body-secondary small">{{ appointment.professional.display_name }}</div>
                   </div>
                   <span class="badge text-bg-{{ appointment.status_color }}">{{ appointment.get_status_display }}</span>
                 </div>
-                {% if can_change %}
-                  <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'in_progress' %}" class="mt-2">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-warning w-100" type="submit">Iniciar atendimento</button>
-                  </form>
-                {% endif %}
+                <div class="d-flex gap-1 mt-2">
+                  {% if can_change %}
+                    <form method="post" action="{% url 'scheduling:appointment-status' appointment.pk 'in_progress' %}" class="flex-fill">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button class="btn btn-sm btn-warning w-100" type="submit">Iniciar atendimento</button>
+                    </form>
+                  {% endif %}
+                  {% if appointment.call_ticket and can_change %}
+                    <form method="post" action="{% url 'calling:recall' appointment.call_ticket.pk %}" class="flex-fill">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button class="btn btn-sm btn-outline-primary w-100" type="submit">Rechamar</button>
+                    </form>
+                  {% endif %}
+                </div>
               </li>
             {% empty %}
               <li class="list-group-item text-body-secondary">Ninguem chamado no momento.</li>

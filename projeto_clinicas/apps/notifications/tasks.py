@@ -44,6 +44,32 @@ def processar_fila_de_envio(limit: int = 100) -> int:
                     )
                     delivery.status = NotificationDelivery.Status.SENT
                     delivery.sent_at = timezone.now()
+                elif delivery.channel == NotificationDelivery.Channel.PUSH:
+                    # Rede de seguranca: o push do "chamar" ja e enviado na
+                    # hora (apps.notifications.push.dispatch_ticket_push).
+                    # So chega aqui se aquele envio imediato falhou antes de
+                    # marcar o status (ex.: processo reiniciado no meio).
+                    from apps.calling.models import PushSubscription
+                    from apps.notifications.push import send_push
+
+                    subscription = PushSubscription.all_objects.filter(
+                        pk=delivery.destination
+                    ).first()
+                    if subscription is None:
+                        delivery.status = NotificationDelivery.Status.SKIPPED
+                        delivery.error_message = "Inscricao de push nao encontrada."
+                    else:
+                        sent, error = send_push(
+                            subscription, title=delivery.subject, body=delivery.body
+                        )
+                        delivery.status = (
+                            NotificationDelivery.Status.SENT
+                            if sent
+                            else NotificationDelivery.Status.FAILED
+                        )
+                        delivery.error_message = error
+                        if sent:
+                            delivery.sent_at = timezone.now()
                 else:
                     delivery.status = NotificationDelivery.Status.SKIPPED
                     delivery.error_message = "Provedor nao configurado para este canal."

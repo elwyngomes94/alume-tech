@@ -700,6 +700,47 @@ def occupancy_report(start: date, end: date) -> Tuple[List[str], List[List]]:
     return headers, rows
 
 
+def calls_report(start: date, end: date, **filters) -> Tuple[List[str], List[List]]:
+    """Senhas de chamada emitidas no periodo, com tempos e contagem de chamadas."""
+    from apps.calling.models import CallTicket
+
+    queryset = CallTicket.objects.filter(
+        created_at__date__gte=start, created_at__date__lte=end
+    ).select_related("appointment", "appointment__patient", "appointment__professional")
+    if filters.get("professional"):
+        queryset = queryset.filter(appointment__professional_id=filters["professional"])
+    if filters.get("priority"):
+        queryset = queryset.filter(priority=filters["priority"])
+    if filters.get("status"):
+        queryset = queryset.filter(appointment__status=filters["status"])
+
+    headers = [
+        "Senha", "Paciente", "Profissional", "Prioridade", "Status",
+        "Emitida", "Chamada", "Iniciada", "Espera (min)", "Vezes chamado",
+    ]
+    rows = []
+    for ticket in queryset.order_by("created_at"):
+        appointment = ticket.appointment
+        wait_minutes = ""
+        if appointment.checked_in_at and appointment.called_at:
+            wait_minutes = int((appointment.called_at - appointment.checked_in_at).total_seconds() // 60)
+        rows.append(
+            [
+                ticket.ticket_number,
+                appointment.patient.display_name,
+                appointment.professional.display_name,
+                ticket.get_priority_display(),
+                appointment.get_status_display(),
+                timezone.localtime(ticket.created_at).strftime("%d/%m/%Y %H:%M"),
+                timezone.localtime(appointment.called_at).strftime("%H:%M") if appointment.called_at else "-",
+                timezone.localtime(appointment.started_at).strftime("%H:%M") if appointment.started_at else "-",
+                wait_minutes,
+                ticket.call_count,
+            ]
+        )
+    return headers, rows
+
+
 def stock_movements_report(start: date, end: date) -> Tuple[List[str], List[List]]:
     from apps.inventory.models import StockMovement
 
@@ -760,6 +801,7 @@ REPORTS = {
     "pagamentos_parciais": ("Pagamentos parciais", partial_payments_report),
     "estornos": ("Estornos", refunds_report),
     "ocupacao_agenda": ("Ocupacao da agenda", occupancy_report),
+    "chamadas": ("Chamadas de pacientes", calls_report),
     "estoque_produtos": ("Estoque - produtos", stock_products_report),
     "estoque_baixo": ("Estoque - abaixo do minimo", stock_low_report),
     "estoque_movimentacoes": ("Estoque - movimentacoes", stock_movements_report),

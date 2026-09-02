@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Painel de chamada - {{ active_clinic }}{% endblock %}
+
+{% block body %}
+<div class="jja-tv-panel">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">{{ active_clinic }} - Painel de chamada</h1>
+    <a href="{% url 'dashboard:reception' %}" class="btn btn-sm btn-outline-light">Sair do painel</a>
+  </div>
+  <div id="jjaTvGrid" class="row g-3">
+    <div class="col-12 text-center opacity-75" id="jjaTvEmpty">Nenhuma senha chamada no momento.</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  "use strict";
+  var STATUS_URL = "{% url 'calling:panel-status' %}";
+  var seenCalled = {};
+
+  function beep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = 660;
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) { /* sem suporte a audio no navegador da TV */ }
+  }
+
+  function render(data) {
+    var grid = document.getElementById("jjaTvGrid");
+    var empty = document.getElementById("jjaTvEmpty");
+    grid.innerHTML = "";
+    if (!data.tickets.length) {
+      grid.appendChild(empty);
+      return;
+    }
+    var currentIds = {};
+    data.tickets.forEach(function (ticket) {
+      currentIds[ticket.id] = true;
+      var isNewCall = ticket.status === "called" && !seenCalled[ticket.id];
+      if (isNewCall && data.sound_enabled) beep();
+      var col = document.createElement("div");
+      col.className = "col-md-4";
+      var card = document.createElement("div");
+      card.className = "jja-tv-card" + (ticket.status === "called" ? " jja-tv-called" : "");
+      card.innerHTML =
+        '<div class="jja-tv-ticket">' + ticket.label + "</div>" +
+        '<div>' + ticket.professional + (ticket.room ? " &middot; Sala " + ticket.room : "") + "</div>";
+      col.appendChild(card);
+      grid.appendChild(col);
+    });
+    seenCalled = currentIds;
+  }
+
+  function poll() {
+    fetch(STATUS_URL).then(function (r) { return r.json(); }).then(render).catch(function () {});
+  }
+  poll();
+  setInterval(poll, 3000);
+})();
+</script>
+{% endblock %}
