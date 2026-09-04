@@ -56,7 +56,8 @@ class AppointmentForm(BootstrapFormMixin, forms.ModelForm):
     )
     pay_now = forms.ChoiceField(
         label="Pagamento sera realizado agora?", choices=[("no", "Nao"), ("yes", "Sim")],
-        required=False, initial="no", widget=forms.RadioSelect,
+        required=False, initial="no",
+        widget=forms.RadioSelect(attrs={"class": "btn-check"}),
     )
     amount_paid_now = forms.DecimalField(
         label="Valor pago agora", max_digits=10, decimal_places=2, required=False,

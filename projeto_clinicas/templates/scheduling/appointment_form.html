@@ -15,115 +15,139 @@
             </div>
           {% endif %}
 
-          <div class="row g-3">
-            <div class="col-md-6 position-relative">
-              <label class="form-label" for="jjaPatientSearch">
-                Paciente <span class="text-danger">*</span>
-              </label>
-              <input type="text" class="form-control" id="jjaPatientSearch"
-                     placeholder="Buscar por nome, CPF, telefone ou numero do prontuario..."
-                     value="{% if form.instance.is_saved %}{{ form.instance.patient.display_name }}{% elif prefill_patient %}{{ prefill_patient.display_name }}{% endif %}"
-                     data-autocomplete-url="{% url 'patients:search' %}"
-                     data-autocomplete-target="id_patient">
-              <div class="form-text">
-                Nao encontrou?
-                <a href="{% url 'patients:create' %}" target="_blank" rel="noopener">+ Cadastrar novo paciente</a>
-                (abre em outra aba; depois volte e busque o nome aqui).
+          <section class="jja-form-section">
+            <h2 class="jja-form-section-title"><i class="bi bi-people"></i> Quem e quando</h2>
+            <div class="row g-3">
+              <div class="col-md-6 position-relative">
+                <label class="form-label" for="jjaPatientSearch">
+                  Paciente <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="jjaPatientSearch"
+                       placeholder="Buscar por nome, CPF, telefone ou numero do prontuario..."
+                       value="{% if form.instance.is_saved %}{{ form.instance.patient.display_name }}{% elif prefill_patient %}{{ prefill_patient.display_name }}{% endif %}"
+                       data-autocomplete-url="{% url 'patients:search' %}"
+                       data-autocomplete-target="id_patient">
+                <div class="form-text">
+                  Nao encontrou?
+                  <a href="{% url 'patients:create' %}" target="_blank" rel="noopener">+ Cadastrar novo paciente</a>
+                  (abre em outra aba; depois volte e busque o nome aqui).
+                </div>
+                {{ form.patient }}
+                <div class="invalid-feedback">Selecione um paciente na lista de busca.</div>
+                {% for error in form.patient.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
               </div>
-              {{ form.patient }}
-              <div class="invalid-feedback">Selecione um paciente na lista de busca.</div>
-              {% for error in form.patient.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
 
-            <div class="col-md-6 position-relative">
-              <label class="form-label" for="jjaProfessionalSearch">
-                Profissional <span class="text-danger">*</span>
-              </label>
-              <input type="text" class="form-control" id="jjaProfessionalSearch"
-                     placeholder="Buscar por nome ou especialidade..."
-                     value="{% if form.instance.is_saved %}{{ form.instance.professional.display_name }}{% elif prefill_professional %}{{ prefill_professional.display_name }}{% endif %}"
-                     data-autocomplete-url="{% url 'professionals:search' %}"
-                     data-autocomplete-target="id_professional">
-              {{ form.professional }}
-              <div class="invalid-feedback">Selecione um profissional na lista de busca.</div>
-              {% for error in form.professional.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
+              <div class="col-md-6 position-relative">
+                <label class="form-label" for="jjaProfessionalSearch">
+                  Profissional <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="jjaProfessionalSearch"
+                       placeholder="Buscar por nome ou especialidade..."
+                       value="{% if form.instance.is_saved %}{{ form.instance.professional.display_name }}{% elif prefill_professional %}{{ prefill_professional.display_name }}{% endif %}"
+                       data-autocomplete-url="{% url 'professionals:search' %}"
+                       data-autocomplete-target="id_professional">
+                {{ form.professional }}
+                <div class="invalid-feedback">Selecione um profissional na lista de busca.</div>
+                {% for error in form.professional.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
 
-            {% for field in form %}
-              {% if field.name not in "patient professional gross_amount discount addition payment_method pay_now amount_paid_now is_courtesy" %}
-                {% if field.is_hidden %}
-                  {{ field }}
-                {% else %}
-                  <div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-md-6{% endif %}">
-                    {% if field.field.widget.input_type == 'checkbox' %}
-                      <div class="form-check">
-                        {{ field }}
-                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                      </div>
-                    {% else %}
-                      <label class="form-label" for="{{ field.id_for_label }}">
-                        {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
-                      </label>
-                      {{ field }}
-                    {% endif %}
+              {% for field in form %}
+                {% if field.name in "date time duration_minutes service room insurance" %}
+                  <div class="col-md-4">
+                    <label class="form-label" for="{{ field.id_for_label }}">
+                      {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                    </label>
+                    {{ field }}
                     {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                   </div>
                 {% endif %}
-              {% endif %}
-            {% endfor %}
-          </div>
+              {% endfor %}
+            </div>
+          </section>
 
-          {% if "gross_amount" in form.fields %}
-            <hr class="my-4">
-            <h2 class="h6 mb-3">Informacoes financeiras</h2>
+          <section class="jja-form-section">
+            <h2 class="jja-form-section-title"><i class="bi bi-card-text"></i> Detalhes</h2>
             <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label" for="{{ form.gross_amount.id_for_label }}">{{ form.gross_amount.label }}</label>
-                {{ form.gross_amount }}
-                <div class="form-text">{{ form.gross_amount.help_text }}</div>
-                {% for error in form.gross_amount.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
-                {{ form.discount }}
-                {% for error in form.discount.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="{{ form.addition.id_for_label }}">{{ form.addition.label }}</label>
-                {{ form.addition }}
-                {% for error in form.addition.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-
-              <div class="col-12">
-                <div class="form-check">
-                  {{ form.is_courtesy }}
-                  <label class="form-check-label" for="{{ form.is_courtesy.id_for_label }}">{{ form.is_courtesy.label }}</label>
-                </div>
-              </div>
-
-              <div class="col-12" id="jjaPayNowWrap">
-                <label class="form-label d-block">{{ form.pay_now.label }}</label>
-                {% for radio in form.pay_now %}
-                  <div class="form-check form-check-inline">
-                    {{ radio.tag }}
-                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+              {% for field in form %}
+                {% if field.name == "notes" %}
+                  <div class="col-12">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                   </div>
-                {% endfor %}
-              </div>
-
-              <div class="col-md-6" id="jjaPaymentMethodWrap">
-                <label class="form-label" for="{{ form.payment_method.id_for_label }}">{{ form.payment_method.label }}</label>
-                {{ form.payment_method }}
-                {% for error in form.payment_method.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="col-md-6" id="jjaAmountPaidWrap">
-                <label class="form-label" for="{{ form.amount_paid_now.id_for_label }}">{{ form.amount_paid_now.label }}</label>
-                {{ form.amount_paid_now }}
-                <div class="form-text">{{ form.amount_paid_now.help_text }}</div>
-                {% for error in form.amount_paid_now.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                {% elif field.is_hidden %}
+                  {{ field }}
+                {% endif %}
+              {% endfor %}
+              <div class="col-12">
+                <label class="jja-toggle-card">
+                  {{ form.is_overbooking }}
+                  <span class="jja-toggle-card-icon"><i class="bi bi-lightning-charge"></i></span>
+                  <span class="jja-toggle-card-text">
+                    <strong>{{ form.is_overbooking.label }}</strong>
+                    <small>Permite agendar mesmo com o horario ja ocupado.</small>
+                  </span>
+                </label>
               </div>
             </div>
+          </section>
+
+          {% if "gross_amount" in form.fields %}
+            <section class="jja-form-section">
+              <h2 class="jja-form-section-title"><i class="bi bi-cash-coin"></i> Financeiro</h2>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.gross_amount.id_for_label }}">{{ form.gross_amount.label }}</label>
+                  {{ form.gross_amount }}
+                  <div class="form-text">{{ form.gross_amount.help_text }}</div>
+                  {% for error in form.gross_amount.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
+                  {{ form.discount }}
+                  {% for error in form.discount.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.addition.id_for_label }}">{{ form.addition.label }}</label>
+                  {{ form.addition }}
+                  {% for error in form.addition.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="col-12">
+                  <label class="jja-toggle-card">
+                    {{ form.is_courtesy }}
+                    <span class="jja-toggle-card-icon"><i class="bi bi-gift"></i></span>
+                    <span class="jja-toggle-card-text">
+                      <strong>{{ form.is_courtesy.label }}</strong>
+                      <small>Nao gera cobranca nem conta a receber para este atendimento.</small>
+                    </span>
+                  </label>
+                </div>
+
+                <div class="col-12" id="jjaPayNowWrap">
+                  <label class="form-label d-block">{{ form.pay_now.label }}</label>
+                  <div class="btn-group" role="group">
+                    {% for radio in form.pay_now %}
+                      {{ radio.tag }}
+                      <label class="btn btn-outline-primary" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <div class="col-md-6" id="jjaPaymentMethodWrap">
+                  <label class="form-label" for="{{ form.payment_method.id_for_label }}">{{ form.payment_method.label }}</label>
+                  {{ form.payment_method }}
+                  {% for error in form.payment_method.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6" id="jjaAmountPaidWrap">
+                  <label class="form-label" for="{{ form.amount_paid_now.id_for_label }}">{{ form.amount_paid_now.label }}</label>
+                  {{ form.amount_paid_now }}
+                  <div class="form-text">{{ form.amount_paid_now.help_text }}</div>
+                  {% for error in form.amount_paid_now.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+              </div>
+            </section>
           {% endif %}
 
           <div class="mt-4 d-flex gap-2">
