@@ -372,6 +372,51 @@ body.jja-ticket-called { background: #0d2e17; }
 
 .jja-tv-ticket { font-size: 2.5rem; font-weight: 800; }
 
+/* Destaque da chamada mais recente no painel de TV: um banner grande no
+   topo (visivel de longe) + um "anel" piscando no card correspondente na
+   grade, para diferenciar a chamada que acabou de acontecer das senhas
+   que ja estao chamadas ha mais tempo. */
+.jja-tv-spotlight {
+  background: linear-gradient(135deg, #198754, #20c997);
+  border-radius: 1rem;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  animation: jja-spotlight-in .4s ease-out, jja-spotlight-pulse 1.4s ease-in-out infinite;
+}
+.jja-tv-spotlight-label {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: .85;
+}
+.jja-tv-spotlight-ticket { font-size: 4.5rem; font-weight: 800; line-height: 1.1; }
+.jja-tv-spotlight-detail { font-size: 1.4rem; margin-top: .25rem; }
+
+@keyframes jja-spotlight-in {
+  from { transform: scale(.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes jja-spotlight-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, .7); }
+  50% { box-shadow: 0 0 0 22px rgba(25, 135, 84, 0); }
+}
+
+.jja-tv-card.jja-tv-flash {
+  animation: jja-ticket-pulse 1.1s ease-in-out infinite, jja-tv-flash-ring 1.2s ease-out 4;
+  outline: 4px solid #ffc107;
+}
+@keyframes jja-tv-flash-ring {
+  0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, .9); }
+  100% { box-shadow: 0 0 0 16px rgba(255, 193, 7, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jja-tv-spotlight, .jja-tv-card.jja-tv-flash, .jja-tv-card.jja-tv-called {
+    animation: none;
+  }
+}
+
 /* Formulario de agendamento: secoes com titulo, e "toggle cards" no lugar
    de checkbox nu para is_overbooking/is_courtesy. */
 .jja-form-section {
