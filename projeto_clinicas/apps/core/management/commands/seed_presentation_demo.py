@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import random
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -60,6 +61,132 @@ DOCTOR_NAMES = [
     "Dr. Rodrigo Souza",
     "Dra. Camila Ribeiro",
 ]
+
+#: Conteudo clinico de exemplo por especialidade, para o prontuario dos
+#: pacientes com atendimento concluido nao nascer vazio na demonstracao.
+#: Cada tupla preenche os campos do modelo "Consulta medica" padrao
+#: (ver apps.medical_records.templates_catalog.MEDICAL_CONSULTATION).
+CLINICAL_NOTES = {
+    "Cardiologia": [
+        {
+            "queixa_principal": "Dor toracica ao esforco, ha cerca de 1 semana.",
+            "historia_doenca_atual": "Paciente relata dor em aperto retroesternal durante "
+                "atividade fisica moderada, sem irradiacao, aliviada com repouso.",
+            "hipoteses_diagnosticas": "Angina estavel a esclarecer.",
+            "diagnostico": "Dor toracica de esforco - investigacao em andamento.",
+            "conduta": "Solicitado ECG de repouso e teste ergometrico. Orientado retorno "
+                "com os exames em 15 dias e reforcada a importancia de repouso caso a dor "
+                "recorra.",
+            "exames_solicitados": "ECG, teste ergometrico, perfil lipidico.",
+        },
+        {
+            "queixa_principal": "Palpitacoes ocasionais nas ultimas duas semanas.",
+            "historia_doenca_atual": "Refere episodios de palpitacao de curta duracao, sem "
+                "sincope, sem relacao clara com esforco.",
+            "hipoteses_diagnosticas": "Extrassistolia benigna a confirmar.",
+            "diagnostico": "Palpitacoes de provavel origem benigna.",
+            "conduta": "Solicitado Holter de 24h. Orientado reduzir consumo de cafeina e "
+                "retornar com o resultado.",
+            "exames_solicitados": "Holter 24h, eletrolitos.",
+        },
+        {
+            "queixa_principal": "Consulta de rotina para acompanhamento de hipertensao.",
+            "historia_doenca_atual": "Paciente em uso regular da medicacao, refere boa "
+                "adesao e nega efeitos colaterais.",
+            "diagnostico": "Hipertensao arterial sistemica controlada.",
+            "conduta": "Mantida a medicacao em uso. Reforcadas orientacoes sobre dieta "
+                "hipossodica e atividade fisica regular. Retorno em 3 meses.",
+            "retorno": "3 meses",
+        },
+    ],
+    "Pediatria": [
+        {
+            "queixa_principal": "Febre e coriza ha 2 dias.",
+            "historia_doenca_atual": "Mae relata febre de ate 38.5C, coriza clara e tosse "
+                "leve, sem dificuldade respiratoria, aceitando bem liquidos.",
+            "diagnostico": "Infeccao de vias aereas superiores.",
+            "conduta": "Orientadas medidas de suporte (hidratacao, antitermico se febre), "
+                "sinais de alarme explicados aos pais. Retorno se piora ou febre persistente "
+                "por mais de 3 dias.",
+        },
+        {
+            "queixa_principal": "Consulta de puericultura de rotina.",
+            "historia_doenca_atual": "Crianca assintomatica, desenvolvimento neuropsicomotor "
+                "adequado para a idade segundo relato dos pais.",
+            "exame_fisico": "Bom estado geral, corado, hidratado, ausculta cardiopulmonar "
+                "sem alteracoes.",
+            "diagnostico": "Crescimento e desenvolvimento adequados para a idade.",
+            "conduta": "Atualizada caderneta de vacinacao. Orientacoes gerais de "
+                "alimentacao e sono. Proxima consulta de rotina em 6 meses.",
+            "retorno": "6 meses",
+        },
+        {
+            "queixa_principal": "Dor abdominal e falta de apetite ha 3 dias.",
+            "historia_doenca_atual": "Sem febre associada, evacuacoes normais, sem vomitos.",
+            "diagnostico": "Dor abdominal inespecifica, provavel origem funcional.",
+            "conduta": "Orientada dieta leve e observacao. Retorno caso dor persista ou "
+                "surjam novos sintomas.",
+        },
+    ],
+    "Ortopedia": [
+        {
+            "queixa_principal": "Dor lombar apos esforco fisico.",
+            "historia_doenca_atual": "Dor iniciada apos levantar peso, sem irradiacao para "
+                "membros inferiores, piora ao movimento.",
+            "exame_fisico": "Contratura de musculatura paravertebral lombar, sem sinais de "
+                "comprometimento neurologico.",
+            "diagnostico": "Lombalgia mecanica aguda.",
+            "conduta": "Prescrito anti-inflamatorio e relaxante muscular, orientado repouso "
+                "relativo e fisioterapia. Retorno em 2 semanas se persistir.",
+            "prescricao": "Anti-inflamatorio via oral por 5 dias, relaxante muscular a noite.",
+        },
+        {
+            "queixa_principal": "Dor no joelho direito ao caminhar, ha 1 mes.",
+            "historia_doenca_atual": "Dor progressiva, pior ao subir escadas, sem historico "
+                "de trauma recente.",
+            "hipoteses_diagnosticas": "Condropatia patelar a confirmar.",
+            "conduta": "Solicitada radiografia de joelho em duas incidencias. Encaminhado "
+                "para fisioterapia. Retorno com o exame.",
+            "exames_solicitados": "Radiografia de joelho direito.",
+        },
+        {
+            "queixa_principal": "Acompanhamento pos-operatorio de fratura de punho.",
+            "exame_fisico": "Boa consolidacao ao exame, mobilidade em recuperacao "
+                "progressiva.",
+            "diagnostico": "Evolucao pos-operatoria satisfatoria.",
+            "conduta": "Mantida fisioterapia motora. Retorno em 30 dias para reavaliacao.",
+            "retorno": "30 dias",
+        },
+    ],
+    "Ginecologia": [
+        {
+            "queixa_principal": "Consulta de rotina - exame preventivo.",
+            "historia_doenca_atual": "Paciente assintomatica, ciclos regulares, sem "
+                "queixas no momento.",
+            "conduta": "Realizada coleta de preventivo. Orientacoes sobre metodo "
+                "contraceptivo em uso. Retorno com resultado em 30 dias.",
+            "exames_solicitados": "Colpocitologia oncotica.",
+            "retorno": "30 dias",
+        },
+        {
+            "queixa_principal": "Irregularidade menstrual nos ultimos 2 ciclos.",
+            "historia_doenca_atual": "Relata atraso e fluxo mais intenso que o habitual, "
+                "nega dor importante.",
+            "hipoteses_diagnosticas": "Disfuncao hormonal a esclarecer.",
+            "conduta": "Solicitados exames hormonais e ultrassonografia transvaginal. "
+                "Retorno com resultados.",
+            "exames_solicitados": "Perfil hormonal, ultrassonografia transvaginal.",
+        },
+        {
+            "queixa_principal": "Acompanhamento pre-natal de rotina.",
+            "exame_fisico": "Altura uterina compativel com idade gestacional, bcf presente.",
+            "diagnostico": "Gestacao de evolucao normal.",
+            "conduta": "Mantido acompanhamento pre-natal. Solicitados exames de rotina do "
+                "trimestre. Retorno em 4 semanas.",
+            "retorno": "4 semanas",
+        },
+    ],
+}
 
 FIRST_NAMES = [
     "Ana", "Bruno", "Carla", "Daniel", "Eduarda", "Felipe", "Gabriela", "Hugo",
@@ -228,6 +355,7 @@ class Command(BaseCommand):
             patients = self._create_patients(clinic, count=100)
             self._create_appointments(clinic, professionals, patients)
             self._seed_finance(clinic)
+            self._seed_medical_records(clinic)
 
     def _create_patients(self, clinic: Clinic, *, count: int) -> list:
         patients = []
@@ -252,21 +380,34 @@ class Command(BaseCommand):
         from apps.calling.services import create_ticket_for_checkin, register_call
 
         today = timezone.localdate()
-        patient_pool = list(patients)
-        random.shuffle(patient_pool)
-        pool_index = 0
 
-        def next_patient():
-            nonlocal pool_index
-            patient = patient_pool[pool_index % len(patient_pool)]
-            pool_index += 1
-            return patient
+        # Pediatria so atende criancas -- separa a lista de pacientes por
+        # idade para o prontuario nao misturar "consulta de puericultura"
+        # com um paciente de 70 anos.
+        children = [p for p in patients if p.birth_date and (today - p.birth_date).days < 13 * 365]
+        adults = [p for p in patients if p not in children]
+        random.shuffle(children)
+        random.shuffle(adults)
+
+        def make_pool(specialty_name):
+            pool = list(children) if specialty_name == "Pediatria" and children else list(adults)
+            return pool or list(patients)
 
         def make_slot(day, hour, minute, duration):
             start = timezone.make_aware(datetime.combine(day, time(hour, minute)))
             return start, start + timedelta(minutes=duration)
 
         for professional, service, room in professionals:
+            specialty = professional.specialties.first()
+            pool = make_pool(specialty.name if specialty else "")
+            pool_index = 0
+
+            def next_patient():
+                nonlocal pool_index
+                patient = pool[pool_index % len(pool)]
+                pool_index += 1
+                return patient
+
             hours = [8, 9, 10, 11, 14, 15, 16, 17]
 
             # --- atendimentos passados (ultimos 12 dias uteis) ------------
@@ -380,3 +521,56 @@ class Command(BaseCommand):
                 finance_services.register_receivable_payment(
                     receivable, amount=receivable.net_amount, method=pix,
                 )
+
+    def _seed_medical_records(self, clinic: Clinic) -> None:
+        """
+        Evolucao assinada para cada atendimento concluido, com conteudo
+        clinico condizente com a especialidade -- e o que voce ve ao abrir
+        o prontuario de um paciente durante a demonstracao.
+        """
+        from apps.medical_records.models import MedicalRecordEntry, RecordTemplate, VitalSigns
+        from apps.medical_records.services import get_or_create_record
+
+        template = RecordTemplate.objects.filter(is_default=True).first()
+        completed = Appointment.objects.filter(
+            clinic=clinic, status=Appointment.Status.COMPLETED,
+        ).exclude(record_entries__isnull=False).select_related(
+            "patient", "professional", "service"
+        )
+        for index, appointment in enumerate(completed):
+            specialty = appointment.professional.specialties.first()
+            bank = CLINICAL_NOTES.get(specialty.name if specialty else "", [])
+            if not bank:
+                continue
+            content = dict(bank[index % len(bank)])
+            content.setdefault("cid", "")
+
+            record = get_or_create_record(appointment.patient)
+            entry = MedicalRecordEntry.objects.create(
+                record=record, appointment=appointment, professional=appointment.professional,
+                template=template, title=str(appointment.service) if appointment.service else "Consulta",
+                data=content, attended_at=appointment.start_at, is_draft=True,
+            )
+            entry.is_draft = False
+            entry.signed_at = appointment.finished_at or appointment.start_at
+            entry.signed_by = appointment.professional.user
+            entry.signature_hash = entry.compute_signature()
+            entry.save(
+                update_fields=["is_draft", "signed_at", "signed_by", "signature_hash", "updated_at"]
+            )
+
+            age_years = (
+                (appointment.start_at.date() - appointment.patient.birth_date).days // 365
+                if appointment.patient.birth_date else 30
+            )
+            is_child = age_years < 13
+            VitalSigns.objects.create(
+                entry=entry,
+                systolic_pressure=random.randint(90, 100) if is_child else random.randint(110, 135),
+                diastolic_pressure=random.randint(55, 65) if is_child else random.randint(70, 88),
+                heart_rate=random.randint(85, 110) if is_child else random.randint(62, 84),
+                temperature=Decimal(str(round(random.uniform(36.2, 37.3), 1))),
+                weight_kg=Decimal(str(round(random.uniform(9, 35), 1))) if is_child
+                else Decimal(str(round(random.uniform(55, 95), 1))),
+                height_cm=random.randint(70, 150) if is_child else random.randint(150, 190),
+            )
