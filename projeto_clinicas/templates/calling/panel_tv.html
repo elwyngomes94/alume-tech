@@ -13,6 +13,15 @@
     <div class="col-12 text-center opacity-75" id="jjaTvEmpty">Nenhuma senha chamada no momento.</div>
   </div>
 </div>
+
+<div class="jja-tv-sound-gate" id="jjaTvSoundGate">
+  <button type="button" class="btn btn-success btn-lg" id="jjaTvSoundGateBtn">
+    <i class="bi bi-volume-up"></i> Toque para ativar o som do painel
+  </button>
+  <p class="mt-3 opacity-75">
+    O navegador so libera som apos um toque na tela. Toque uma vez ao ligar a TV.
+  </p>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -32,19 +41,45 @@
   // chamadas antes de a TV ser ligada.
   var hasRenderedOnce = false;
 
-  function beep() {
+  // O navegador so deixa o Web Audio tocar de verdade depois de um toque
+  // do usuario na pagina (politica de autoplay) -- sem isso, o painel
+  // ficava "mudo" mesmo com o codigo do som certo, porque ninguem toca na
+  // tela da TV depois de deixa-la ligada. Por isso o AudioContext e
+  // criado (e mantido) so no toque do botao/tela, uma vez, e reaproveitado
+  // em todo beep() dali em diante.
+  var audioCtx = null;
+
+  function unlockAudio() {
+    if (audioCtx) return;
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      return;
+    }
+    var gate = document.getElementById("jjaTvSoundGate");
+    if (gate) gate.classList.add("d-none");
+  }
+
+  var gateBtn = document.getElementById("jjaTvSoundGateBtn");
+  if (gateBtn) gateBtn.addEventListener("click", unlockAudio);
+  // Qualquer toque na tela tambem libera (o botao e so a instrucao visual).
+  document.addEventListener("click", unlockAudio, { once: true });
+  document.addEventListener("touchstart", unlockAudio, { once: true });
+
+  function beep() {
+    if (!audioCtx) return;
+    try {
+      if (audioCtx.state === "suspended") audioCtx.resume();
       // Duas notas (nao uma so) para chamar mais atencao numa sala de
       // espera com som ambiente.
       [660, 880].forEach(function (freq, index) {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
         osc.type = "sine";
         osc.frequency.value = freq;
-        var start = ctx.currentTime + index * 0.28;
+        var start = audioCtx.currentTime + index * 0.28;
         gain.gain.setValueAtTime(0.001, start);
         gain.gain.exponentialRampToValueAtTime(0.25, start + 0.03);
         gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);

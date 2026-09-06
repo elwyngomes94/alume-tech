@@ -358,6 +358,20 @@ body.jja-ticket-called { background: #0d2e17; }
   padding: 2rem;
 }
 
+.jja-tv-sound-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(11, 31, 58, .96);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
 .jja-tv-card {
   background: rgba(255, 255, 255, .06);
   border-radius: .75rem;

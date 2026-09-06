@@ -58,18 +58,35 @@
     return output;
   }
 
-  function beep() {
+  // Celulares (principalmente iOS) so liberam som depois de um toque do
+  // usuario na pagina -- por isso o AudioContext e criado no primeiro
+  // toque em qualquer lugar da tela (nao exige um botao especifico) e
+  // reaproveitado depois, em vez de criar um novo (que nasceria
+  // suspenso/mudo) na hora do aviso.
+  var audioCtx = null;
+  function unlockAudio() {
+    if (audioCtx) return;
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) { /* sem suporte a audio -- beep() ignora silenciosamente */ }
+  }
+  document.addEventListener("click", unlockAudio, { once: true });
+  document.addEventListener("touchstart", unlockAudio, { once: true });
+
+  function beep() {
+    if (!audioCtx) unlockAudio();
+    if (!audioCtx) return;
+    try {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioCtx.destination);
       osc.type = "sine";
       osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
       osc.start();
-      osc.stop(ctx.currentTime + 0.6);
+      osc.stop(audioCtx.currentTime + 0.6);
     } catch (e) { /* navegador sem suporte a audio -- ignora */ }
   }
 
