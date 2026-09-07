@@ -29,7 +29,9 @@
 (function () {
   "use strict";
   var STATUS_URL = "{% url 'calling:panel-status' %}";
-  var seenCalled = {};
+  // Guarda o ultimo call_count visto de cada senha -- usado para detectar
+  // tanto a primeira chamada quanto qualquer rechamada (ver render()).
+  var seenCallCounts = {};
   //  Por quanto tempo o destaque grande (banner) e o anel piscando no
   //  card ficam ativos apos uma chamada nova, antes de "assentar" no
   //  visual normal de senha chamada (que continua ate ser atendida) --
@@ -136,21 +138,28 @@
       grid.appendChild(empty);
       renderSpotlight(null);
       spotlightTicketId = null;
-      seenCalled = {};
+      seenCallCounts = {};
       hasRenderedOnce = true;
       return;
     }
-    // 1a passada: descobre se alguma senha acabou de ser chamada nesta
-    // atualizacao -- precisa ser conhecido ANTES de montar os cards, para
-    // o card certo ja nascer com o anel piscando (nao so na proxima
-    // atualizacao, 3s depois).
+    // 1a passada: descobre se alguma senha acabou de ser chamada (ou
+    // RECHAMADA) nesta atualizacao -- precisa ser conhecido ANTES de
+    // montar os cards, para o card certo ja nascer com o anel piscando
+    // (nao so na proxima atualizacao, 3s depois). Rechamar nao muda o
+    // status (continua "called"), so soma ao contador de chamadas -- por
+    // isso o gatilho e o contador ter aumentado, nao so o status ter
+    // mudado, senao uma rechamada nao acendia o destaque de novo.
     var currentIds = {};
     var justCalled = null;
     data.tickets.forEach(function (ticket) {
       currentIds[ticket.id] = true;
-      if (hasRenderedOnce && ticket.status === "called" && !seenCalled[ticket.id]) {
+      var previousCount = seenCallCounts[ticket.id];
+      var isNewOrRecalled = ticket.status === "called" &&
+        (previousCount === undefined || ticket.call_count > previousCount);
+      if (hasRenderedOnce && isNewOrRecalled) {
         justCalled = ticket;
       }
+      seenCallCounts[ticket.id] = ticket.call_count;
     });
 
     if (justCalled) {
@@ -187,7 +196,6 @@
       col.appendChild(card);
       grid.appendChild(col);
     });
-    seenCalled = currentIds;
     hasRenderedOnce = true;
   }
 
