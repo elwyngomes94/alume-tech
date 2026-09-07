@@ -28,9 +28,11 @@ e apenas conveniencia visual -- a autorizacao real acontece no backend.
       <a href="{% url 'scheduling:agenda-day' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'scheduling' %}active{% endif %}">
         <i class="bi bi-calendar3"></i> Agenda
       </a>
-      <a href="{% url 'scheduling:waiting-list' %}" class="jja-nav-link">
-        <i class="bi bi-hourglass-split"></i> Lista de espera
-      </a>
+      {% if perms_clinic.calling_manage_queue and active_clinic.has_module_calling %}
+        <a href="{% url 'calling:queue-page' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'calling' %}active{% endif %}">
+          <i class="bi bi-megaphone"></i> Chamadas
+        </a>
+      {% endif %}
       {% if perms_clinic.appointment_payment and active_clinic.has_module_finance %}
         <a href="{% url 'finance:pending-payments' %}" class="jja-nav-link {% if request.resolver_match.url_name == 'pending-payments' %}active{% endif %}">
           <i class="bi bi-cash"></i> Pagamentos pendentes

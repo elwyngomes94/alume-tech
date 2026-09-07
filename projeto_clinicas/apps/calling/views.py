@@ -97,8 +97,21 @@ class PanelStatusApiView(CallingModuleMixin, View):
         return JsonResponse({"tickets": data, "sound_enabled": config.sound_enabled})
 
 
+class QueuePageView(CallingModuleMixin, TemplateView):
+    """
+    Pagina "Chamadas": fila de atendimento do dia, separada por sala, na
+    ordem de chamada (prioridade legal primeiro, depois quem chegou ha
+    mais tempo). Atualiza sozinha conforme a recepcao vai registrando a
+    chegada dos pacientes (mesmo padrao de polling ja usado no painel de
+    TV e na pagina do paciente).
+    """
+
+    template_name = "calling/queue_page.html"
+    required_permission = "calling.manage_queue"
+
+
 class QueueRecallableView(CallingModuleMixin, View):
-    """Fila de senhas ativas do dia -- usado pelo painel de recepcao/profissional."""
+    """Fila de senhas ativas do dia -- consumida pela pagina "Chamadas"."""
 
     required_permission = "calling.manage_queue"
 
@@ -117,8 +130,15 @@ class QueueRecallableView(CallingModuleMixin, View):
                 "appointment_id": str(t.appointment_id),
                 "ticket_number": t.ticket_number,
                 "priority": t.priority,
+                "priority_label": t.get_priority_display(),
                 "status": t.appointment.status,
+                "status_label": t.appointment.get_status_display(),
                 "call_count": t.call_count,
+                "patient": t.appointment.patient.display_name,
+                "professional": t.appointment.professional.display_name,
+                "room": t.appointment.room.name if t.appointment.room_id else "",
+                "checked_in_at": t.appointment.checked_in_at.isoformat()
+                if t.appointment.checked_in_at else None,
             }
             for t in tickets
         ]

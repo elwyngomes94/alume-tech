@@ -17,6 +17,7 @@ app_name = "calling"
 
 urlpatterns = [
     # --- Painel de staff --------------------------------------------------
+    path("app/chamadas/", views.QueuePageView.as_view(), name="queue-page"),
     path("app/chamadas/painel/", views.PanelTVView.as_view(), name="panel-tv"),
     path("app/chamadas/painel/status/", views.PanelStatusApiView.as_view(), name="panel-status"),
     path("app/chamadas/fila/", views.QueueRecallableView.as_view(), name="queue-status"),

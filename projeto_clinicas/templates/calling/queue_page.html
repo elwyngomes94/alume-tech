@@ -1,0 +1,159 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Chamadas{% endblock %}
+{% block page_subtitle %}Fila de atendimento de hoje, por sala{% endblock %}
+
+{% block page_actions %}
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'calling:panel-tv' %}" target="_blank">
+    <i class="bi bi-tv"></i> Painel de TV
+  </a>
+  {% if perms_clinic.calling_configure %}
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'calling:config' %}">
+      <i class="bi bi-gear"></i> Configuracoes
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div id="jjaQueueRooms" data-status-url-base="{% url 'scheduling:appointment-status' '00000000-0000-0000-0000-000000000000' 'STATUS' %}" data-recall-url-base="{% url 'calling:recall' '00000000-0000-0000-0000-000000000000' %}" data-csrf-token="{{ csrf_token }}">
+  <div class="text-center text-body-secondary py-5" id="jjaQueueEmpty">Carregando fila...</div>
+</div>
+
+<div class="mt-4">
+  <a class="small text-body-secondary" href="{% url 'scheduling:waiting-list' %}">
+    <i class="bi bi-hourglass-split"></i> Ver lista de espera de vagas (pacientes aguardando horario livre)
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  "use strict";
+  var root = document.getElementById("jjaQueueRooms");
+  var STATUS_URL = "{% url 'calling:queue-status' %}";
+  var APPOINTMENT_PLACEHOLDER = "00000000-0000-0000-0000-000000000000";
+  var statusUrlBase = root.dataset.statusUrlBase;
+  var recallUrlBase = root.dataset.recallUrlBase;
+  var csrfToken = root.dataset.csrfToken;
+
+  var STATUS_ORDER = { checked_in: 0, called: 1, in_progress: 2 };
+  var PRIORITY_BADGE = {
+    emergency: "danger", pcd: "warning", pregnant: "warning",
+    elderly: "warning", legal: "warning", normal: "secondary",
+  };
+
+  function minutesSince(iso) {
+    if (!iso) return null;
+    var diffMs = Date.now() - new Date(iso).getTime();
+    return Math.max(0, Math.round(diffMs / 60000));
+  }
+
+  function statusUrl(appointmentId, status) {
+    return statusUrlBase.replace(APPOINTMENT_PLACEHOLDER, appointmentId).replace("STATUS", status);
+  }
+
+  function recallUrl(ticketId) {
+    return recallUrlBase.replace(APPOINTMENT_PLACEHOLDER, ticketId);
+  }
+
+  function actionForm(url, label, btnClass) {
+    return (
+      '<form method="post" action="' + url + '" class="d-inline">' +
+      '<input type="hidden" name="csrfmiddlewaretoken" value="' + csrfToken + '">' +
+      '<input type="hidden" name="next" value="' + window.location.pathname + '">' +
+      '<button type="submit" class="btn btn-sm ' + btnClass + '">' + label + "</button>" +
+      "</form>"
+    );
+  }
+
+  function actionsFor(ticket) {
+    if (ticket.status === "checked_in") {
+      return actionForm(statusUrl(ticket.appointment_id, "called"), "Chamar", "btn-primary");
+    }
+    if (ticket.status === "called") {
+      return (
+        actionForm(recallUrl(ticket.id), "Rechamar", "btn-outline-primary me-1") +
+        actionForm(statusUrl(ticket.appointment_id, "in_progress"), "Iniciar atendimento", "btn-warning")
+      );
+    }
+    if (ticket.status === "in_progress") {
+      return actionForm(statusUrl(ticket.appointment_id, "completed"), "Finalizar", "btn-success");
+    }
+    return "";
+  }
+
+  function waitLabel(ticket) {
+    var minutes = minutesSince(ticket.checked_in_at);
+    if (minutes === null) return "";
+    return minutes <= 1 ? "aguardando ha 1 min" : "aguardando ha " + minutes + " min";
+  }
+
+  function render(data) {
+    var tickets = data.tickets || [];
+    if (!tickets.length) {
+      root.innerHTML = '<div class="text-center text-body-secondary py-5">Nenhum paciente na fila no momento.</div>';
+      return;
+    }
+
+    // Agrupa por sala mantendo a ordem que a API ja devolve (prioridade
+    // legal primeiro, depois quem chegou ha mais tempo).
+    var rooms = {};
+    var roomOrder = [];
+    tickets.forEach(function (ticket) {
+      var key = ticket.room || "Sem sala definida";
+      if (!rooms[key]) {
+        rooms[key] = [];
+        roomOrder.push(key);
+      }
+      rooms[key].push(ticket);
+    });
+
+    var html = "";
+    roomOrder.forEach(function (roomName) {
+      var roomTickets = rooms[roomName];
+      html += '<div class="card mb-3">';
+      html += '<div class="card-header d-flex justify-content-between align-items-center">';
+      html += '<span><i class="bi bi-door-open"></i> ' + roomName + "</span>";
+      html += '<span class="badge text-bg-secondary">' + roomTickets.length + "</span>";
+      html += "</div>";
+      html += '<ul class="list-group list-group-flush">';
+      roomTickets.forEach(function (ticket) {
+        var priorityBadge = "";
+        if (ticket.priority !== "normal") {
+          priorityBadge =
+            '<span class="badge text-bg-' + (PRIORITY_BADGE[ticket.priority] || "secondary") +
+            ' ms-2">' + ticket.priority_label + "</span>";
+        }
+        var callCount = ticket.call_count > 1
+          ? '<span class="text-body-secondary small"> &times;' + ticket.call_count + "</span>"
+          : "";
+        html +=
+          '<li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">' +
+          "<div>" +
+          '<span class="badge text-bg-dark me-2">' + ticket.ticket_number + "</span>" +
+          "<strong>" + ticket.patient + "</strong>" + callCount + priorityBadge +
+          '<div class="text-body-secondary small">' +
+          ticket.professional + " &middot; " + ticket.status_label +
+          (waitLabel(ticket) ? " &middot; " + waitLabel(ticket) : "") +
+          "</div>" +
+          "</div>" +
+          '<div>' + actionsFor(ticket) + "</div>" +
+          "</li>";
+      });
+      html += "</ul></div>";
+    });
+    root.innerHTML = html;
+  }
+
+  function poll() {
+    fetch(STATUS_URL, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.json(); })
+      .then(render)
+      .catch(function () {});
+  }
+  poll();
+  setInterval(poll, 3000);
+})();
+</script>
+{% endblock %}
