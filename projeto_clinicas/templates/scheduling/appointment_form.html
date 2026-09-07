@@ -51,8 +51,11 @@
                 {% for error in form.professional.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
               </div>
 
+              {{ form.time }}
+              {% for error in form.time.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+
               {% for field in form %}
-                {% if field.name in "date time duration_minutes service room insurance" %}
+                {% if field.name in "date duration_minutes service room insurance" %}
                   <div class="col-md-4">
                     <label class="form-label" for="{{ field.id_for_label }}">
                       {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
@@ -76,8 +79,6 @@
                     {{ field }}
                     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                   </div>
-                {% elif field.is_hidden %}
-                  {{ field }}
                 {% endif %}
               {% endfor %}
               <div class="col-12">
@@ -159,8 +160,12 @@
     </div>
   </div>
   <div class="col-lg-4">
-    <div class="card">
-      <div class="card-header">Horarios livres</div>
+    <div class="card" id="jjaSlotsCard">
+      <div class="card-header">
+        Horarios livres
+        <span class="text-danger">*</span>
+        <div class="form-text mb-0">Clique num horario disponivel para selecionar.</div>
+      </div>
       <div class="card-body" id="jjaSlots" data-url="{% url 'scheduling:slots' %}"></div>
     </div>
   </div>

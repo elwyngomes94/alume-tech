@@ -32,7 +32,11 @@ class AppointmentForm(BootstrapFormMixin, forms.ModelForm):
     """
 
     date = forms.DateField(label="Data", widget=forms.DateInput(attrs={"type": "date"}))
-    time = forms.TimeField(label="Horario", widget=forms.TimeInput(attrs={"type": "time"}))
+    # Sem widget visivel de proposito: o horario e escolhido clicando num
+    # slot livre no painel lateral (ver static/js/jja.js), nao digitado --
+    # evita marcar um horario que colide com outro atendimento ou fora da
+    # disponibilidade do profissional.
+    time = forms.TimeField(label="Horario", widget=forms.HiddenInput())
     duration_minutes = forms.IntegerField(
         label="Duracao (min)", min_value=5, max_value=480, initial=30
     )

@@ -284,6 +284,8 @@ window.JJA.shareOnWhatsApp = function (text) {
                 other.classList.remove("active");
               });
               button.classList.add("active");
+              const slotsCard = document.getElementById("jjaSlotsCard");
+              if (slotsCard) slotsCard.classList.remove("jja-slots-missing");
             });
           });
         })
@@ -293,7 +295,16 @@ window.JJA.shareOnWhatsApp = function (text) {
     }
 
     [professionalField, dateField, serviceField].forEach(function (field) {
-      field && field.addEventListener("change", loadSlots);
+      field && field.addEventListener("change", function () {
+        // Profissional/data/servico mudaram -- o horario escolhido antes
+        // (se algum) nao vale mais para a nova combinacao, entao limpa e
+        // forca escolher de novo na lista atualizada (nao mantem so na
+        // tela: o campo oculto tambem precisa ficar vazio, senao um
+        // horario de outro profissional/dia poderia ser enviado sem
+        // ninguem perceber, ja que o campo nao aparece mais na tela).
+        if (timeField) timeField.value = "";
+        loadSlots();
+      });
     });
     loadSlots();
   }
@@ -325,6 +336,11 @@ window.JJA.shareOnWhatsApp = function (text) {
       const professionalId = document.getElementById("id_professional");
       const patientName = document.getElementById("jjaPatientSearch");
       const professionalName = document.getElementById("jjaProfessionalSearch");
+      // O horario tambem e um campo oculto agora (escolhido clicando num
+      // slot livre, nao digitado -- ver static/js/jja.js mais acima), pelo
+      // mesmo motivo precisa ser checado manualmente aqui.
+      const timeId = document.getElementById("id_time");
+      const slotsCard = document.getElementById("jjaSlotsCard");
       let missing = false;
       if (patientId && !patientId.value) {
         patientName.classList.add("is-invalid");
@@ -338,8 +354,20 @@ window.JJA.shareOnWhatsApp = function (text) {
       } else if (professionalName) {
         professionalName.classList.remove("is-invalid");
       }
+      if (timeId && !timeId.value) {
+        if (slotsCard) slotsCard.classList.add("jja-slots-missing");
+        missing = true;
+      } else if (slotsCard) {
+        slotsCard.classList.remove("jja-slots-missing");
+      }
       if (missing) {
-        (patientId && !patientId.value ? patientName : professionalName).focus();
+        if (patientId && !patientId.value) {
+          patientName.focus();
+        } else if (professionalId && !professionalId.value) {
+          professionalName.focus();
+        } else if (slotsCard) {
+          slotsCard.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
         return;
       }
       if (!form.reportValidity()) return;
