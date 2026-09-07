@@ -90,3 +90,51 @@ def handler404(request, exception=None):
 
 def handler500(request):
     return render(request, "errors/500.html", status=500)
+
+
+# ---------------------------------------------------------------------------
+# App Android (TWA)
+# ---------------------------------------------------------------------------
+#: Fingerprint SHA-256 do certificado usado para assinar o APK (gerado uma
+#: unica vez ao criar o keystore -- ver relato de entrega). Sem isso, o
+#: Android nao confia que o app e o site sao do mesmo dono e o TWA abre
+#: dentro de uma Custom Tab (com barra de navegador), em vez de tela cheia.
+ANDROID_APP_SHA256_FINGERPRINT = (
+    "FD:96:63:D9:07:22:8C:4D:9D:B3:B2:4E:95:20:6F:BF:0E:A6:03:1C:B0:EF:14:3B:35:38:15:F2:9F:1C:D4:12"
+)
+ANDROID_APP_PACKAGE_ID = "com.alumetech.app"
+
+
+def asset_links_json(request):
+    """Digital Asset Links: prova que o app Android e este site sao do mesmo dono."""
+    return JsonResponse(
+        [
+            {
+                "relation": ["delegate_permission/common.handle_all_urls"],
+                "target": {
+                    "namespace": "android_app",
+                    "package_name": ANDROID_APP_PACKAGE_ID,
+                    "sha256_cert_fingerprints": [ANDROID_APP_SHA256_FINGERPRINT],
+                },
+            }
+        ],
+        safe=False,
+    )
+
+
+def download_android_app(request):
+    """Baixa o APK do aplicativo Android (fora da Play Store, direto do sistema)."""
+    from pathlib import Path
+
+    from django.conf import settings
+    from django.http import FileResponse, Http404
+
+    apk_path = Path(settings.BASE_DIR) / "static" / "downloads" / "alume-tech.apk"
+    if not apk_path.exists():
+        raise Http404
+    return FileResponse(
+        open(apk_path, "rb"),
+        as_attachment=True,
+        filename="alume-tech.apk",
+        content_type="application/vnd.android.package-archive",
+    )

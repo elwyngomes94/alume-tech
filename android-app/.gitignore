@@ -1,0 +1,13 @@
+# Segredo de assinatura -- nunca versionar. Sem ele, atualizacoes futuras do
+# app nao podem ser assinadas como "o mesmo aplicativo" (ver relato final).
+android.keystore
+*.keystore
+*.jks
+
+node_modules/
+build/
+app-release-signed.apk
+app-release-unsigned.aab
+*.idsig
+*.log
+.gradle/
