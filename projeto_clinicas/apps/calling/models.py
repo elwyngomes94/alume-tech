@@ -133,9 +133,13 @@ class CallPanelConfig(TenantModel):
     ticket_prefix = models.CharField("prefixo da senha", max_length=3, default="A")
     display_mode = models.CharField(
         "exibicao no painel", max_length=12, choices=DisplayMode.choices,
-        default=DisplayMode.TICKET_ONLY,
+        default=DisplayMode.FULL_NAME,
     )
     sound_enabled = models.BooleanField("som no painel", default=True)
+    voice_announcement = models.BooleanField("anunciar a chamada por voz", default=True)
+    highlight_seconds = models.PositiveIntegerField(
+        "duracao do destaque no painel de TV (segundos)", default=20
+    )
     no_show_minutes = models.PositiveIntegerField(
         "minutos para alerta de nao comparecimento", default=15
     )

@@ -88,13 +88,29 @@ class PanelStatusApiView(CallingModuleMixin, View):
                     "id": str(ticket.pk),
                     "ticket_number": ticket.ticket_number,
                     "label": patient_label,
+                    # So preenchido quando a clinica optou por mostrar o nome
+                    # completo -- usado tanto no texto grande do painel
+                    # quanto no anuncio por voz (mesma configuracao de
+                    # privacidade vale para os dois).
+                    "patient_name": (
+                        appointment.patient.display_name
+                        if config.display_mode == CallPanelConfig.DisplayMode.FULL_NAME
+                        else ""
+                    ),
                     "status": appointment.status,
                     "room": appointment.room.name if appointment.room_id else "",
                     "professional": appointment.professional.display_name,
                     "call_count": ticket.call_count,
                 }
             )
-        return JsonResponse({"tickets": data, "sound_enabled": config.sound_enabled})
+        return JsonResponse(
+            {
+                "tickets": data,
+                "sound_enabled": config.sound_enabled,
+                "voice_announcement": config.voice_announcement,
+                "highlight_seconds": config.highlight_seconds,
+            }
+        )
 
 
 class QueuePageView(CallingModuleMixin, TemplateView):

@@ -6,11 +6,16 @@ from apps.calling.models import CallPanelConfig
 class CallPanelConfigForm(forms.ModelForm):
     class Meta:
         model = CallPanelConfig
-        fields = ["ticket_prefix", "display_mode", "sound_enabled", "no_show_minutes"]
+        fields = [
+            "ticket_prefix", "display_mode", "sound_enabled", "voice_announcement",
+            "highlight_seconds", "no_show_minutes",
+        ]
         widgets = {
             "ticket_prefix": forms.TextInput(attrs={"class": "form-control", "maxlength": 3}),
             "display_mode": forms.Select(attrs={"class": "form-select"}),
             "sound_enabled": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "voice_announcement": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "highlight_seconds": forms.NumberInput(attrs={"class": "form-control", "min": 5, "max": 120}),
             "no_show_minutes": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
         }
 

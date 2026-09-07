@@ -405,6 +405,7 @@ body.jja-ticket-called { background: #0d2e17; }
   opacity: .85;
 }
 .jja-tv-spotlight-ticket { font-size: 4.5rem; font-weight: 800; line-height: 1.1; }
+.jja-tv-spotlight-name { font-size: 2.25rem; font-weight: 700; margin-top: .25rem; }
 .jja-tv-spotlight-detail { font-size: 1.4rem; margin-top: .25rem; }
 
 @keyframes jja-spotlight-in {

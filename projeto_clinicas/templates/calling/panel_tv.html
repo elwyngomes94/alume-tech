@@ -32,8 +32,10 @@
   var seenCalled = {};
   //  Por quanto tempo o destaque grande (banner) e o anel piscando no
   //  card ficam ativos apos uma chamada nova, antes de "assentar" no
-  //  visual normal de senha chamada (que continua ate ser atendida).
-  var SPOTLIGHT_MS = 12000;
+  //  visual normal de senha chamada (que continua ate ser atendida) --
+  //  configuravel por clinica (Configuracoes da chamada), com um valor
+  //  seguro caso a resposta ainda nao tenha chegado.
+  var DEFAULT_SPOTLIGHT_MS = 20000;
   var spotlightTicketId = null;
   var spotlightTimer = null;
   // A 1a resposta do polling so serve para saber o que ja estava chamado
@@ -89,6 +91,22 @@
     } catch (e) { /* sem suporte a audio no navegador da TV */ }
   }
 
+  function speak(ticket) {
+    if (!("speechSynthesis" in window)) return;
+    var sentence = "Senha " + ticket.ticket_number + ".";
+    if (ticket.patient_name) sentence += " " + ticket.patient_name + ".";
+    sentence += " Dirija-se";
+    if (ticket.room) sentence += " a sala " + ticket.room;
+    if (ticket.professional) sentence += (ticket.room ? ", com " : " a ") + ticket.professional;
+    sentence += ".";
+    try {
+      var utterance = new SpeechSynthesisUtterance(sentence);
+      utterance.lang = "pt-BR";
+      utterance.rate = 0.95;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) { /* sem suporte a sintese de voz no navegador da TV */ }
+  }
+
   function renderSpotlight(ticket) {
     var el = document.getElementById("jjaTvSpotlight");
     if (!ticket) {
@@ -98,9 +116,15 @@
     el.innerHTML =
       '<div class="jja-tv-spotlight">' +
       '<div class="jja-tv-spotlight-label">Chamando agora</div>' +
-      '<div class="jja-tv-spotlight-ticket">' + ticket.label + "</div>" +
-      '<div class="jja-tv-spotlight-detail">' + ticket.professional +
-      (ticket.room ? " &middot; Sala " + ticket.room : "") + "</div>" +
+      '<div class="jja-tv-spotlight-ticket">' + ticket.ticket_number + "</div>" +
+      (ticket.patient_name
+        ? '<div class="jja-tv-spotlight-name">' + ticket.patient_name + "</div>"
+        : "") +
+      '<div class="jja-tv-spotlight-detail">' +
+      (ticket.room ? "Sala " + ticket.room : "") +
+      (ticket.room && ticket.professional ? " &middot; " : "") +
+      ticket.professional +
+      "</div>" +
       "</div>";
   }
 
@@ -131,13 +155,15 @@
 
     if (justCalled) {
       if (data.sound_enabled) beep();
+      if (data.voice_announcement) speak(justCalled);
       spotlightTicketId = justCalled.id;
       renderSpotlight(justCalled);
       if (spotlightTimer) window.clearTimeout(spotlightTimer);
+      var spotlightMs = (data.highlight_seconds ? data.highlight_seconds * 1000 : DEFAULT_SPOTLIGHT_MS);
       spotlightTimer = window.setTimeout(function () {
         spotlightTicketId = null;
         renderSpotlight(null);
-      }, SPOTLIGHT_MS);
+      }, spotlightMs);
     } else if (spotlightTicketId && !currentIds[spotlightTicketId]) {
       // A senha em destaque saiu da lista (foi atendida/cancelada) --
       // limpa o banner na hora, sem esperar o timer.
@@ -155,7 +181,8 @@
       if (ticket.id === spotlightTicketId) classes += " jja-tv-flash";
       card.className = classes;
       card.innerHTML =
-        '<div class="jja-tv-ticket">' + ticket.label + "</div>" +
+        '<div class="jja-tv-ticket">' + ticket.ticket_number + "</div>" +
+        (ticket.patient_name ? "<div class=\"fs-4\">" + ticket.patient_name + "</div>" : "") +
         '<div>' + ticket.professional + (ticket.room ? " &middot; Sala " + ticket.room : "") + "</div>";
       col.appendChild(card);
       grid.appendChild(col);
