@@ -124,23 +124,12 @@ def asset_links_json(request):
 
 def download_android_app(request):
     """Baixa o APK do aplicativo Android (fora da Play Store, direto do sistema)."""
-    import logging
     from pathlib import Path
 
     from django.conf import settings
     from django.http import FileResponse, Http404
 
-    log = logging.getLogger("jja.security")
-    base_dir = Path(settings.BASE_DIR)
-    apk_path = base_dir / "static" / "downloads" / "alume-tech.apk"
-    downloads_dir = base_dir / "static" / "downloads"
-    log.warning(
-        "android-app-download-diag base_dir=%s exists_base=%s exists_downloads_dir=%s "
-        "downloads_listing=%s exists_apk=%s",
-        base_dir, base_dir.exists(), downloads_dir.exists(),
-        list(downloads_dir.iterdir()) if downloads_dir.exists() else None,
-        apk_path.exists(),
-    )
+    apk_path = Path(settings.BASE_DIR) / "static" / "downloads" / "alume-tech.apk"
     if not apk_path.exists():
         raise Http404
     return FileResponse(
