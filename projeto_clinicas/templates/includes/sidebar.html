@@ -28,7 +28,7 @@ e apenas conveniencia visual -- a autorizacao real acontece no backend.
       <a href="{% url 'scheduling:agenda-day' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'scheduling' %}active{% endif %}">
         <i class="bi bi-calendar3"></i> Agenda
       </a>
-      {% if perms_clinic.calling_manage_queue and active_clinic.has_module_calling %}
+      {% if active_clinic.has_module_calling %}
         <a href="{% url 'calling:queue-page' %}" class="jja-nav-link {% if request.resolver_match.namespace == 'calling' %}active{% endif %}">
           <i class="bi bi-megaphone"></i> Chamadas
         </a>

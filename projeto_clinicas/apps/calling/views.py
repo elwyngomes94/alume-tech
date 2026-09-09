@@ -123,13 +123,24 @@ class QueuePageView(CallingModuleMixin, TemplateView):
     """
 
     template_name = "calling/queue_page.html"
-    required_permission = "calling.manage_queue"
+    # So a visualizacao exige "ver a agenda" (mesmo requisito do item
+    # "Agenda" no menu, ja que a pagina fica dentro do mesmo grupo) --
+    # quem pode ver a fila mas nao pode chamar/rechamar (sem
+    # calling.manage_queue) so nao ve os botoes de acao, continua vendo
+    # a lista normalmente.
+    required_permission = "appointment.view"
 
 
 class QueueRecallableView(CallingModuleMixin, View):
-    """Fila de senhas ativas do dia -- consumida pela pagina "Chamadas"."""
+    """
+    Fila de senhas ativas do dia -- consumida pela pagina "Chamadas".
 
-    required_permission = "calling.manage_queue"
+    Mesma permissao da pagina (``appointment.view``): e so leitura, a
+    exigencia mais forte (``calling.manage_queue``) fica nos botoes de
+    acao (chamar/rechamar), que postam para outras rotas.
+    """
+
+    required_permission = "appointment.view"
 
     def get(self, request):
         tickets = services.queue_for_clinic(
